@@ -78,33 +78,6 @@ public class AioCommands {
             )
         );
         
-        // /skills - Open skills GUI
-        dispatcher.register(Commands.literal("skills")
-            .executes(ctx -> {
-                ServerPlayer player = ctx.getSource().getPlayerOrException();
-                SkillsScreen.open(player);
-                return 1;
-            })
-        );
-        
-        // /ascend - Open ascendancy GUI
-        dispatcher.register(Commands.literal("ascend")
-            .executes(ctx -> {
-                ServerPlayer player = ctx.getSource().getPlayerOrException();
-                AscendancyScreen.open(player);
-                return 1;
-            })
-        );
-        
-        // /shop - Open shop GUI
-        dispatcher.register(Commands.literal("shop")
-            .executes(ctx -> {
-                ServerPlayer player = ctx.getSource().getPlayerOrException();
-                ShopScreen.open(player);
-                return 1;
-            })
-        );
-        
         // /squatgrow - Toggle squat grow
         dispatcher.register(Commands.literal("squatgrow")
             .executes(ctx -> {

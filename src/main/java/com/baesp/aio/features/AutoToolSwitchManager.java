@@ -1,61 +1,83 @@
 package com.baesp.aio.features;
 
 import com.baesp.aio.AioMod;
-import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.server.level.ServerPlayer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 
 /**
  * Auto Tool Switch - Automatically finds and switches to best tool for breaking blocks
+ * Uses client-side targeting detection to swap tools BEFORE player starts breaking
  */
 public class AutoToolSwitchManager {
     
+    private static BlockState lastTargetedBlock = null;
+    
     public static void register() {
-        PlayerBlockBreakEvents.BEFORE.register((world, player, pos, state, blockEntity) -> {
-            if (player instanceof ServerPlayer serverPlayer) {
-                ItemStack currentTool = serverPlayer.getMainHandItem();
-                ItemStack bestTool = findBestTool(serverPlayer, state);
+        // Client-side tick event - check what block player is targeting
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.player == null || client.level == null) {
+                return;
+            }
+            
+            // Get what the player is looking at
+            HitResult hitResult = client.hitResult;
+            if (hitResult instanceof BlockHitResult blockHit && hitResult.getType() == HitResult.Type.BLOCK) {
+                BlockState targetState = client.level.getBlockState(blockHit.getBlockPos());
                 
-                // If player is using wrong tool, auto-switch to better tool in hotbar
-                if (bestTool != null && !ItemStack.matches(currentTool, bestTool)) {
-                    int slot = findToolInHotbar(serverPlayer, bestTool);
-                    if (slot >= 0) {
-                        // Get current selected slot using private access workaround
-                        int currentSlot = -1;
-                        for (int i = 0; i < 9; i++) {
-                            if (serverPlayer.getInventory().getItem(i) == currentTool) {
-                                currentSlot = i;
-                                break;
-                            }
-                        }
+                // Only check if targeting a different block
+                if (!targetState.equals(lastTargetedBlock)) {
+                    lastTargetedBlock = targetState;
+                    
+                    // Check if we need to swap tools
+                    LocalPlayer player = client.player;
+                    Inventory inventory = player.getInventory();
+                    ItemStack currentTool = player.getMainHandItem();
+                    ItemStack bestTool = findBestToolClient(player, targetState);
+                    
+                    // If player is using wrong tool, auto-switch to better tool in hotbar
+                    if (bestTool != null && !ItemStack.matches(currentTool, bestTool)) {
+                        int bestSlot = findToolInHotbarClient(player, bestTool);
                         
-                        if (currentSlot != slot) {
-                            // Swap the items in inventory to simulate tool selection
-                            ItemStack toolToUse = serverPlayer.getInventory().getItem(slot);
-                            ItemStack oldTool = serverPlayer.getInventory().getItem(currentSlot);
-                            serverPlayer.getInventory().setItem(slot, oldTool);
-                            serverPlayer.getInventory().setItem(currentSlot, toolToUse);
-                            serverPlayer.sendSystemMessage(
-                                net.minecraft.network.chat.Component.literal("§aAuto-switched to better tool!")
-                            );
+                        // Use reflection to access/modify the selected slot
+                        try {
+                            java.lang.reflect.Field selectedField = Inventory.class.getDeclaredField("selected");
+                            selectedField.setAccessible(true);
+                            int currentSlot = selectedField.getInt(inventory);
+                            
+                            if (bestSlot >= 0 && bestSlot != currentSlot) {
+                                // Swap to the better tool slot
+                                selectedField.setInt(inventory, bestSlot);
+                                player.displayClientMessage(
+                                    net.minecraft.network.chat.Component.literal("§aAuto-switched to better tool!"),
+                                    true // Show as action bar
+                                );
+                            }
+                        } catch (Exception e) {
+                            AioMod.LOGGER.error("Failed to access selected hotbar slot: " + e.getMessage());
                         }
                     }
                 }
+            } else {
+                // Not looking at a block
+                lastTargetedBlock = null;
             }
-            return true;
         });
         
-        AioMod.LOGGER.info("Auto Tool Switch Manager registered.");
+        AioMod.LOGGER.info("Auto Tool Switch Manager registered (client-side targeting detection).");
     }
     
-    private static ItemStack findBestTool(ServerPlayer player, BlockState state) {
+    private static ItemStack findBestToolClient(LocalPlayer player, BlockState state) {
         ItemStack bestTool = null;
         float bestSpeed = 0;
         
-        // Check all inventory slots
-        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+        // Check hotbar slots only (0-8)
+        for (int i = 0; i < 9; i++) {
             ItemStack stack = player.getInventory().getItem(i);
             if (!stack.isEmpty()) {
                 float speed = stack.getDestroySpeed(state);
@@ -69,7 +91,7 @@ public class AutoToolSwitchManager {
         return bestTool;
     }
     
-    private static int findToolInHotbar(ServerPlayer player, ItemStack targetTool) {
+    private static int findToolInHotbarClient(LocalPlayer player, ItemStack targetTool) {
         for (int i = 0; i < 9; i++) {
             ItemStack stack = player.getInventory().getItem(i);
             if (stack.getItem() == targetTool.getItem()) {
