@@ -8,8 +8,7 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Auto Tool Switch - Automatically finds and suggests best tool for breaking blocks
- * Note: Automatic switching requires client-side implementation
+ * Auto Tool Switch - Automatically finds and switches to best tool for breaking blocks
  */
 public class AutoToolSwitchManager {
     
@@ -19,14 +18,29 @@ public class AutoToolSwitchManager {
                 ItemStack currentTool = serverPlayer.getMainHandItem();
                 ItemStack bestTool = findBestTool(serverPlayer, state);
                 
-                // If player is using wrong tool, send hint
+                // If player is using wrong tool, auto-switch to better tool in hotbar
                 if (bestTool != null && !ItemStack.matches(currentTool, bestTool)) {
                     int slot = findToolInHotbar(serverPlayer, bestTool);
                     if (slot >= 0) {
-                        // Found better tool in hotbar
-                        serverPlayer.sendSystemMessage(
-                            net.minecraft.network.chat.Component.literal("§e⚠ Better tool in slot " + (slot + 1))
-                        );
+                        // Get current selected slot using private access workaround
+                        int currentSlot = -1;
+                        for (int i = 0; i < 9; i++) {
+                            if (serverPlayer.getInventory().getItem(i) == currentTool) {
+                                currentSlot = i;
+                                break;
+                            }
+                        }
+                        
+                        if (currentSlot != slot) {
+                            // Swap the items in inventory to simulate tool selection
+                            ItemStack toolToUse = serverPlayer.getInventory().getItem(slot);
+                            ItemStack oldTool = serverPlayer.getInventory().getItem(currentSlot);
+                            serverPlayer.getInventory().setItem(slot, oldTool);
+                            serverPlayer.getInventory().setItem(currentSlot, toolToUse);
+                            serverPlayer.sendSystemMessage(
+                                net.minecraft.network.chat.Component.literal("§aAuto-switched to better tool!")
+                            );
+                        }
                     }
                 }
             }

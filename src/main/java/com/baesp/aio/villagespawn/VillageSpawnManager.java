@@ -20,36 +20,54 @@ public class VillageSpawnManager {
     private static boolean hasSetSpawn = false;
     
     public static void init() {
-        // TODO: Village spawn is temporarily disabled - need to find correct 1.21.11 API
-        // The setDefaultSpawnPos / setSpawn methods don't exist in current Minecraft version
-        // Will research and implement properly in next version
-        AioMod.LOGGER.warn("Village Spawn Point system temporarily disabled - API research needed.");
-        return;
-        
-        /*
         if (!AioMod.CONFIG.villageSpawnEnabled) {
             AioMod.LOGGER.info("Village Spawn Point system disabled in config.");
             return;
         }
         
-        // Register world load event to set spawn at village
+        // Register world load event to set spawn at village (using Serilum's approach)
         ServerWorldEvents.LOAD.register((server, world) -> {
             if (!hasSetSpawn && world == server.overworld()) {
-                BlockPos villagePos = findVillageSpawn(world, (ServerLevelData) world.getLevelData());
-                
-                if (villagePos != null) {
-                    // Set the shared spawn position for the overworld
-                    world.setDefaultSpawnPos(villagePos, 0.0f);
-                    hasSetSpawn = true;
-                    AioMod.LOGGER.info("Successfully set world spawn to village at: " + villagePos.toShortString());
-                } else {
-                    AioMod.LOGGER.warn("Could not find village for spawn, using default spawn.");
-                }
+                onWorldLoad(world, (ServerLevelData) world.getLevelData());
             }
         });
         
         AioMod.LOGGER.info("Village Spawn Point system initialized.");
-        */
+    }
+    
+    /**
+     * Called when world loads to set spawn at nearest village
+     * Based on Serilum's Village Spawn Point implementation
+     */
+    public static boolean onWorldLoad(ServerLevel serverLevel, ServerLevelData serverLevelData) {
+        if (hasSetSpawn) {
+            return false;
+        }
+        
+        AioMod.LOGGER.info("Finding the nearest village for spawn. This might take a few seconds.");
+        BlockPos villagePos = findVillageSpawn(serverLevel, serverLevelData);
+        
+        if (villagePos == null) {
+            AioMod.LOGGER.warn("No village found within search radius, using default spawn.");
+            return false;
+        }
+        
+        AioMod.LOGGER.info("Village found! Setting world spawn to village at: " + villagePos.toShortString());
+        
+        // Use Serilum's approach: update RespawnData
+        net.minecraft.world.level.storage.LevelData.RespawnData oldRespawnData = serverLevel.getRespawnData();
+        net.minecraft.world.level.storage.LevelData.RespawnData newRespawnData = 
+            net.minecraft.world.level.storage.LevelData.RespawnData.of(
+                oldRespawnData.dimension(), 
+                villagePos, 
+                oldRespawnData.yaw(), 
+                oldRespawnData.pitch()
+            );
+        
+        serverLevel.setRespawnData(newRespawnData);
+        hasSetSpawn = true;
+        
+        return true;
     }
     
     /**
