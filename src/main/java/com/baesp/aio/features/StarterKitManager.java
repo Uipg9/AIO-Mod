@@ -51,9 +51,15 @@ public class StarterKitManager {
         PlayerDataManager.setBoolean(player, "received_starter_kit", true);
     }
     
-    private static void giveStarterKit(ServerPlayer player) {
-        // Mark as received first
-        setReceivedKit(player);
+    public static void giveStarterKit(ServerPlayer player) {
+        giveStarterKit(player, true);
+    }
+    
+    private static void giveStarterKit(ServerPlayer player, boolean markAsReceived) {
+        // Mark as received first (only for new players)
+        if (markAsReceived) {
+            setReceivedKit(player);
+        }
         
         // === TOOLS ===
         // Stone sword
@@ -73,11 +79,11 @@ public class StarterKitManager {
         giveItem(player, shovel);
         
         // === ARMOR ===
-        // Leather armor set
-        giveItem(player, new ItemStack(Items.LEATHER_HELMET));
-        giveItem(player, new ItemStack(Items.LEATHER_CHESTPLATE));
-        giveItem(player, new ItemStack(Items.LEATHER_LEGGINGS));
-        giveItem(player, new ItemStack(Items.LEATHER_BOOTS));
+        // Leather armor set - auto-equip to armor slots (36-39)
+        player.getInventory().setItem(36, new ItemStack(Items.LEATHER_BOOTS));       // Feet slot (36)
+        player.getInventory().setItem(37, new ItemStack(Items.LEATHER_LEGGINGS));    // Legs slot (37)
+        player.getInventory().setItem(38, new ItemStack(Items.LEATHER_CHESTPLATE));  // Chest slot (38)
+        player.getInventory().setItem(39, new ItemStack(Items.LEATHER_HELMET));      // Head slot (39)
         
         // === FOOD ===
         giveItem(player, new ItemStack(Items.BREAD, 16));
@@ -103,9 +109,11 @@ public class StarterKitManager {
         player.sendSystemMessage(Component.literal("§7You've received a §aStarter Kit§7!"));
         player.sendSystemMessage(Component.literal(""));
         player.sendSystemMessage(Component.literal("§7Key Features:"));
-        player.sendSystemMessage(Component.literal("§8• §fPress §eG §fto open the §aShop"));
+        player.sendSystemMessage(Component.literal("§8• §fPress §eJ §fto open the §aShop"));
         player.sendSystemMessage(Component.literal("§8• §fPress §eK §fto view your §bSkills"));
-        player.sendSystemMessage(Component.literal("§8• §fPress §eJ §ffor §dAscendancy Tree"));
+        player.sendSystemMessage(Component.literal("§8• §fPress §eM §ffor §dAscendancy Tree"));
+        player.sendSystemMessage(Component.literal("§8• §fPress §eG §ffor §aSquat Grow"));
+        player.sendSystemMessage(Component.literal("§8• §fPress §eN §ffor §dVoid Magnet"));
         player.sendSystemMessage(Component.literal("§8• §fHold §eSHIFT §f+ break for Vein Mining"));
         player.sendSystemMessage(Component.literal("§8• §fPress §eB §ffor Full Brightness"));
         player.sendSystemMessage(Component.literal("§8• §fPress §eH §fto toggle HUD sidebar"));

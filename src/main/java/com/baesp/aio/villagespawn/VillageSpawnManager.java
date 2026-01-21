@@ -1,13 +1,12 @@
 package com.baesp.aio.villagespawn;
 
 import com.baesp.aio.AioMod;
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.storage.ServerLevelData;
 
 /**
  * Village Spawn Manager - sets world spawn to nearest village
- * Note: Structure finding simplified for 1.21.11 compatibility
+ * Note: Feature disabled for 1.21.11 due to API complexity
  */
 public class VillageSpawnManager {
     
@@ -27,10 +26,9 @@ public class VillageSpawnManager {
     public static boolean setVillageSpawn(ServerLevel world, ServerLevelData levelData) {
         if (!AioMod.CONFIG.villageSpawnEnabled) return false;
         
-        // Village spawn feature - simplified implementation
-        // In 1.21.11 structure locating API is complex, 
-        // for now this just logs and returns false (use default spawn)
-        AioMod.LOGGER.info("Village spawn check triggered - using default spawn position.");
+        // Village spawn feature disabled for now due to API complexity in 1.21.11
+        // Structure finding has changed significantly, would require more research
+        AioMod.LOGGER.info("Village spawn feature not yet implemented for 1.21.11 - using default spawn.");
         return false;
     }
 }

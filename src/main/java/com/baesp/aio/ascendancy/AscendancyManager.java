@@ -2,6 +2,7 @@ package com.baesp.aio.ascendancy;
 
 import com.baesp.aio.AioMod;
 import com.baesp.aio.data.PlayerDataManager;
+import com.baesp.aio.features.StarterKitManager;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.core.BlockPos;
@@ -162,6 +163,9 @@ public class AscendancyManager {
         
         // Clear ender chest
         player.getEnderChestInventory().clearContent();
+        
+        // Give starter kit after clearing inventory
+        StarterKitManager.giveStarterKit(player);
         
         // Reset to spawn - get server via the player's level
         ServerLevel overworld = ((ServerLevel) player.level()).getServer().overworld();
