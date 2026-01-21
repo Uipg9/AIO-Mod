@@ -18,16 +18,16 @@ import net.minecraft.world.effect.MobEffects;
 import org.lwjgl.glfw.GLFW;
 
 public class AioKeybindings {
-    // ROW 1: GUI Utilities (G, H, J, K)
-    public static KeyMapping OPEN_SHOP;          // G - Shop
+    // ROW 1: Utility Keybinds (G, H, J, K) - Near Squat Grow (C)
+    public static KeyMapping TOGGLE_SQUAT_GROW;  // G - Squat Grow Toggle
     public static KeyMapping TOGGLE_HUD;         // H - Toggle HUD Sidebar
-    public static KeyMapping OPEN_ASCENDANCY;    // J - Ascendancy Tree
+    public static KeyMapping OPEN_SHOP;          // J - Shop
     public static KeyMapping OPEN_SKILLS;        // K - Skills Menu
     
-    // ROW 2: Feature Toggles (B, N, M)
+    // ROW 2: Additional Utilities (B, N, M)
     public static KeyMapping TOGGLE_BRIGHTNESS;  // B - Full Brightness Toggle
     public static KeyMapping TOGGLE_VOID_MAGNET; // N - Void Magnet Toggle
-    public static KeyMapping TOGGLE_SQUAT_GROW;  // M - Squat Grow Toggle
+    public static KeyMapping OPEN_ASCENDANCY;    // M - Ascendancy Tree
     
     // Misc
     public static KeyMapping OPEN_QUESTS;        // Q - Daily Quests (future)
@@ -41,9 +41,9 @@ public class AioKeybindings {
     );
     
     public static void register() {
-        // ROW 1: GUI Utilities
-        OPEN_SHOP = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-            "key.aio.shop",
+        // ROW 1: Utility Keybinds (G, H, J, K)
+        TOGGLE_SQUAT_GROW = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+            "key.aio.squatgrow",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_G,
             AIO_CATEGORY
@@ -56,8 +56,8 @@ public class AioKeybindings {
             AIO_CATEGORY
         ));
         
-        OPEN_ASCENDANCY = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-            "key.aio.ascendancy",
+        OPEN_SHOP = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+            "key.aio.shop",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_J,
             AIO_CATEGORY
@@ -70,7 +70,7 @@ public class AioKeybindings {
             AIO_CATEGORY
         ));
         
-        // ROW 2: Feature Toggles
+        // ROW 2: Additional Utilities
         TOGGLE_BRIGHTNESS = KeyBindingHelper.registerKeyBinding(new KeyMapping(
             "key.aio.brightness",
             InputConstants.Type.KEYSYM,
@@ -85,8 +85,8 @@ public class AioKeybindings {
             AIO_CATEGORY
         ));
         
-        TOGGLE_SQUAT_GROW = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-            "key.aio.squatgrow",
+        OPEN_ASCENDANCY = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+            "key.aio.ascendancy",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_M,
             AIO_CATEGORY
@@ -124,16 +124,15 @@ public class AioKeybindings {
             );
         }
         
-        // J - Open Ascendancy
-        while (OPEN_ASCENDANCY.consumeClick()) {
-            AioNetworkClient.sendRequestData();
-            client.setScreen(new AscendancyScreen());
-        }
-        
         // K - Open Skills
         while (OPEN_SKILLS.consumeClick()) {
             AioNetworkClient.sendRequestData();
             client.setScreen(new SkillsScreen());
+        }
+        
+        // G - Toggle Squat Grow
+        while (TOGGLE_SQUAT_GROW.consumeClick()) {
+            AioNetworkClient.sendToggleSquatGrow();
         }
         
         // B - Toggle Full Brightness (Night Vision Effect)
@@ -177,6 +176,12 @@ public class AioKeybindings {
                 voidMagnetEnabled ? "⚡ Void Magnet ON" : "⚡ Void Magnet OFF",
                 voidMagnetEnabled ? 0xFF9955FF : 0xFF888888
             );
+        }
+        
+        // M - Open Ascendancy
+        while (OPEN_ASCENDANCY.consumeClick()) {
+            AioNetworkClient.sendRequestData();
+            client.setScreen(new AscendancyScreen());
         }
         
         // M - Toggle Squat Grow

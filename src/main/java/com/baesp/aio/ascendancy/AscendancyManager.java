@@ -45,13 +45,20 @@ public class AscendancyManager {
             }
         });
         
-        // Block break event for Soul XP (ores)
+        // Block break event for Soul XP (any block + ores bonus)
         PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
             if (player instanceof ServerPlayer serverPlayer) {
                 String blockName = BuiltInRegistries.BLOCK.getKey(state.getBlock()).getPath();
+                
+                // All blocks grant 1 Soul XP
+                addSoulXp(serverPlayer, 1);
+                
+                // Ores grant bonus Soul XP
                 if (blockName.contains("ore") || blockName.contains("_ore")) {
-                    int xpGain = AioMod.CONFIG.soulXpPerOreBreak;
-                    addSoulXp(serverPlayer, xpGain);
+                    int bonusXp = AioMod.CONFIG.soulXpPerOreBreak - 1;
+                    if (bonusXp > 0) {
+                        addSoulXp(serverPlayer, bonusXp);
+                    }
                 }
             }
         });

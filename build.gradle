@@ -37,6 +37,9 @@ dependencies {
     
     // ModMenu integration - optional, uncomment when compatible version available
     // modImplementation "com.terraformersmc:modmenu:15.0.0"
+    
+    // Note: Fabric Autoswitch can be added separately as a standalone mod
+    // Download from: https://github.com/dexman545/Fabric-Autoswitch
 }
 
 java {
