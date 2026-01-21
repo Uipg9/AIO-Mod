@@ -4,15 +4,19 @@ import com.baesp.aio.AioMod;
 import com.baesp.aio.data.PlayerDataManager;
 import com.baesp.aio.features.StarterKitManager;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 
 public class AscendancyManager {
@@ -61,6 +65,13 @@ public class AscendancyManager {
                         addSoulXp(serverPlayer, bonusXp);
                     }
                 }
+            }
+        });
+        
+        // Respawn at ascension location
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+            if (!alive) { // Player died and respawned
+                teleportToAscensionSpawn(newPlayer);
             }
         });
         
@@ -171,16 +182,48 @@ public class AscendancyManager {
         ServerLevel overworld = ((ServerLevel) player.level()).getServer().overworld();
         // Use world origin as spawn position
         BlockPos spawnPos = BlockPos.ZERO;
+        double spawnX = spawnPos.getX() + 0.5;
+        double spawnY = 64.0;
+        double spawnZ = spawnPos.getZ() + 0.5;
+        
         player.teleportTo(
             overworld,
-            spawnPos.getX() + 0.5,
-            64.0, // Safe y level
-            spawnPos.getZ() + 0.5,
+            spawnX,
+            spawnY,
+            spawnZ,
             java.util.Set.of(),
             player.getYRot(),
             player.getXRot(),
             false
         );
+        
+        // Save ascension spawn point after 10 seconds (200 ticks)
+        final ServerLevel finalOverworld = overworld;
+        final double finalX = spawnX;
+        final double finalY = spawnY;
+        final double finalZ = spawnZ;
+        final var server = ((ServerLevel) player.level()).getServer();
+        final long executeAtTick = ((ServerLevel) player.level()).getGameTime() + 200; // 10 seconds
+        final ServerPlayer finalPlayer = player;
+        
+        // Schedule delayed task using server tick events
+        final boolean[] executed = {false};
+        ServerTickEvents.END_SERVER_TICK.register(tickServer -> {
+            if (executed[0]) return; // Already executed
+            if (tickServer != server) return;
+            if (tickServer.overworld().getGameTime() >= executeAtTick) {
+                AscendancyData currentData = PlayerDataManager.getData(finalPlayer).ascendancy;
+                currentData.ascensionSpawnX = finalX;
+                currentData.ascensionSpawnY = finalY;
+                currentData.ascensionSpawnZ = finalZ;
+                currentData.ascensionSpawnDimension = finalOverworld.dimension().toString();
+                PlayerDataManager.savePlayer(finalPlayer);
+                finalPlayer.sendSystemMessage(
+                    Component.literal("§d✦ §7Ascension spawn point saved! You will respawn here on death.")
+                );
+                executed[0] = true;
+            }
+        });
         
         player.sendSystemMessage(
             Component.literal("§d✦ §5ASCENSION COMPLETE! §d✦")
@@ -190,6 +233,46 @@ public class AscendancyManager {
         );
         player.sendSystemMessage(
             Component.literal("§7Total Ascensions: §b" + data.ascensionCount)
+        );
+    }
+    
+    private static void teleportToAscensionSpawn(ServerPlayer player) {
+        AscendancyData data = PlayerDataManager.getData(player).ascendancy;
+        
+        // Check if ascension spawn is set
+        if (Double.isNaN(data.ascensionSpawnX) || data.ascensionSpawnDimension == null) {
+            return; // No ascension spawn saved yet
+        }
+        
+        // Get the dimension
+        var server = ((ServerLevel) player.level()).getServer();
+        ServerLevel targetLevel = null;
+        for (ServerLevel level : server.getAllLevels()) {
+            if (level.dimension().toString().equals(data.ascensionSpawnDimension)) {
+                targetLevel = level;
+                break;
+            }
+        }
+        
+        if (targetLevel == null) {
+            AioMod.LOGGER.warn("Could not find dimension: " + data.ascensionSpawnDimension);
+            return;
+        }
+        
+        // Teleport to saved ascension spawn
+        player.teleportTo(
+            targetLevel,
+            data.ascensionSpawnX,
+            data.ascensionSpawnY,
+            data.ascensionSpawnZ,
+            java.util.Set.of(),
+            player.getYRot(),
+            player.getXRot(),
+            false
+        );
+        
+        player.sendSystemMessage(
+            Component.literal("§d✦ §7Respawned at ascension location")
         );
     }
     

@@ -14,6 +14,12 @@ public class AscendancyData {
     public int ascensionCount = 0;
     public int prestigePoints = 0;
     
+    // Ascension spawn point (respawn location after ascension)
+    public double ascensionSpawnX = Double.NaN;
+    public double ascensionSpawnY = Double.NaN;
+    public double ascensionSpawnZ = Double.NaN;
+    public String ascensionSpawnDimension = "";
+    
     // Upgrades - key: upgrade name, value: level
     public Map<String, Integer> upgrades = new HashMap<>();
     
@@ -30,6 +36,12 @@ public class AscendancyData {
         ascensionCount = tag.getIntOr("AscensionCount", 0);
         prestigePoints = tag.getIntOr("PrestigePoints", 0);
         selectedConstellation = tag.getStringOr("Constellation", "");
+        
+        // Load ascension spawn point
+        ascensionSpawnX = tag.getDoubleOr("AscensionSpawnX", Double.NaN);
+        ascensionSpawnY = tag.getDoubleOr("AscensionSpawnY", Double.NaN);
+        ascensionSpawnZ = tag.getDoubleOr("AscensionSpawnZ", Double.NaN);
+        ascensionSpawnDimension = tag.getStringOr("AscensionSpawnDimension", "");
         
         // Load upgrades
         upgrades.clear();
@@ -53,6 +65,12 @@ public class AscendancyData {
         tag.putInt("AscensionCount", ascensionCount);
         tag.putInt("PrestigePoints", prestigePoints);
         tag.putString("Constellation", selectedConstellation);
+        
+        // Save ascension spawn point
+        tag.putDouble("AscensionSpawnX", ascensionSpawnX);
+        tag.putDouble("AscensionSpawnY", ascensionSpawnY);
+        tag.putDouble("AscensionSpawnZ", ascensionSpawnZ);
+        tag.putString("AscensionSpawnDimension", ascensionSpawnDimension);
         
         // Save upgrades
         CompoundTag upgradesTag = new CompoundTag();
