@@ -44,9 +44,28 @@ public class AscendancyManager {
         // Kill event for Soul XP
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, damageSource) -> {
             if (damageSource.getEntity() instanceof ServerPlayer player) {
+                int xpGain = 0;
+                long moneyGain = 0;
+                
                 if (entity instanceof Monster) {
-                    int xpGain = AioMod.CONFIG.soulXpPerKill;
+                    // Hostile mobs
+                    xpGain = AioMod.CONFIG.soulXpPerKill;
+                    moneyGain = 5; // $5 per hostile mob
+                } else if (entity instanceof net.minecraft.world.entity.animal.Animal ||
+                           entity instanceof net.minecraft.world.entity.ambient.AmbientCreature) {
+                    // Passive mobs (cows, pigs, sheep, chickens, bats, etc.)
+                    xpGain = Math.max(1, AioMod.CONFIG.soulXpPerKill / 2); // Half XP for passive
+                    moneyGain = 2; // $2 per passive mob
+                }
+                
+                if (xpGain > 0) {
                     addSoulXp(player, xpGain);
+                }
+                if (moneyGain > 0) {
+                    com.baesp.aio.rpg.economy.EconomyManager.deposit(player, moneyGain);
+                    player.sendSystemMessage(
+                        Component.literal("§6+$" + moneyGain + " §7from kill")
+                    );
                 }
             }
         });

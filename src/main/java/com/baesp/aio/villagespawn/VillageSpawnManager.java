@@ -1,6 +1,7 @@
 package com.baesp.aio.villagespawn;
 
 import com.baesp.aio.AioMod;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.Registries;
@@ -12,16 +13,43 @@ import com.mojang.datafixers.util.Pair;
 
 /**
  * Village Spawn Manager - sets world spawn to nearest village
+ * Based on Serilum's Village Spawn Point implementation
  */
 public class VillageSpawnManager {
     
+    private static boolean hasSetSpawn = false;
+    
     public static void init() {
+        // TODO: Village spawn is temporarily disabled - need to find correct 1.21.11 API
+        // The setDefaultSpawnPos / setSpawn methods don't exist in current Minecraft version
+        // Will research and implement properly in next version
+        AioMod.LOGGER.warn("Village Spawn Point system temporarily disabled - API research needed.");
+        return;
+        
+        /*
         if (!AioMod.CONFIG.villageSpawnEnabled) {
             AioMod.LOGGER.info("Village Spawn Point system disabled in config.");
             return;
         }
         
+        // Register world load event to set spawn at village
+        ServerWorldEvents.LOAD.register((server, world) -> {
+            if (!hasSetSpawn && world == server.overworld()) {
+                BlockPos villagePos = findVillageSpawn(world, (ServerLevelData) world.getLevelData());
+                
+                if (villagePos != null) {
+                    // Set the shared spawn position for the overworld
+                    world.setDefaultSpawnPos(villagePos, 0.0f);
+                    hasSetSpawn = true;
+                    AioMod.LOGGER.info("Successfully set world spawn to village at: " + villagePos.toShortString());
+                } else {
+                    AioMod.LOGGER.warn("Could not find village for spawn, using default spawn.");
+                }
+            }
+        });
+        
         AioMod.LOGGER.info("Village Spawn Point system initialized.");
+        */
     }
     
     /**

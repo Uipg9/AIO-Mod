@@ -90,6 +90,14 @@ public class AioMod implements ModInitializer {
         
         // Auto-save tick
         ServerTickEvents.END_SERVER_TICK.register(server -> {
+            // Periodic HUD sync - every 20 ticks (1 second)
+            if (server.getTickCount() % 20 == 0) {
+                for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                    AioNetwork.sendSyncData(player);
+                }
+            }
+            
+            // Auto-save every 5 minutes
             if (server.getTickCount() % (20 * 60 * 5) == 0) { // Every 5 minutes
                 PlayerDataManager.saveAllPlayers();
             }
