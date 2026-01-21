@@ -96,17 +96,53 @@ public class AscendancyScreen extends SimpleGui {
         }
         
         // Ascension button (bottom center)
+        boolean canAscend = AscendancyManager.canAscend(player);
         setSlot(49, new GuiElementBuilder()
             .setItem(Items.NETHER_STAR)
-            .setName(Component.literal("§5⚜ ASCEND ⚜"))
+            .setName(Component.literal(canAscend ? "§5⚜ ASCEND ⚜" : "§c⚜ LOCKED ⚜"))
             .addLoreLine(Component.literal(""))
             .addLoreLine(Component.literal("§7Reset your progress to gain"))
-            .addLoreLine(Component.literal("§e" + AscendancyManager.getUpgradeCost("", 1) + " Prestige Points"))
+            .addLoreLine(Component.literal("§e" + com.baesp.aio.AioMod.CONFIG.prestigePointsPerAscension + " Prestige Points"))
+            .addLoreLine(Component.literal(""))
+            .addLoreLine(Component.literal("§7Requirement:"))
+            .addLoreLine(Component.literal(canAscend 
+                ? "§a✓ Soul Level " + AscendancyManager.REQUIRED_SOUL_LEVEL_FOR_ASCENSION 
+                : "§c✖ Soul Level " + AscendancyManager.REQUIRED_SOUL_LEVEL_FOR_ASCENSION + " (Currently: " + data.soulLevel + ")"))
             .addLoreLine(Component.literal(""))
             .addLoreLine(Component.literal("§c⚠ This will clear your inventory!"))
             .addLoreLine(Component.literal(""))
-            .addLoreLine(Component.literal("§7Use §e/ascension confirm §7to proceed"))
-            .glow()
+            .addLoreLine(canAscend 
+                ? Component.literal("§7Use §e/ascension confirm §7to proceed")
+                : Component.literal("§7Keep playing to gain Soul XP!"))
+            .glow(canAscend)
+            .build()
+        );
+        
+        // Guide button (bottom left)
+        setSlot(47, new GuiElementBuilder()
+            .setItem(Items.BOOK)
+            .setName(Component.literal("§e§l? Guide"))
+            .addLoreLine(Component.literal(""))
+            .addLoreLine(Component.literal("§6═══ Ascendancy System ═══"))
+            .addLoreLine(Component.literal(""))
+            .addLoreLine(Component.literal("§e★ Soul XP & Levels:"))
+            .addLoreLine(Component.literal("§7• Gained from all gameplay"))
+            .addLoreLine(Component.literal("§7• Mining, fighting, crafting, etc."))
+            .addLoreLine(Component.literal("§7• Each level requires more XP"))
+            .addLoreLine(Component.literal(""))
+            .addLoreLine(Component.literal("§d★ Ascension:"))
+            .addLoreLine(Component.literal("§7• Requires Soul Level 5"))
+            .addLoreLine(Component.literal("§7• Resets inventory & progress"))
+            .addLoreLine(Component.literal("§7• Grants Prestige Points"))
+            .addLoreLine(Component.literal("§7• Keeps upgrades"))
+            .addLoreLine(Component.literal(""))
+            .addLoreLine(Component.literal("§a★ Upgrades:"))
+            .addLoreLine(Component.literal("§7• Purchase with Prestige Points"))
+            .addLoreLine(Component.literal("§7• Permanent bonuses"))
+            .addLoreLine(Component.literal("§7• Stack across ascensions"))
+            .addLoreLine(Component.literal(""))
+            .addLoreLine(Component.literal("§bClick to close this guide"))
+            .setCallback((index, type, action) -> setupGui())
             .build()
         );
         

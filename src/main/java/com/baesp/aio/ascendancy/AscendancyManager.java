@@ -32,6 +32,7 @@ public class AscendancyManager {
     public static final String UPGRADE_WISDOM = "wisdom";          // +XP gain
     public static final String UPGRADE_KEEPER = "keeper";          // +Inventory slots
     
+    public static final int REQUIRED_SOUL_LEVEL_FOR_ASCENSION = 5;
     public static final int MAX_UPGRADE_LEVEL = 10;
     
     public static void init() {
@@ -155,6 +156,11 @@ public class AscendancyManager {
         // Speed handled by attribute modifier
         
         // Other upgrades are applied in their respective systems
+    }
+    
+    public static boolean canAscend(ServerPlayer player) {
+        AscendancyData data = PlayerDataManager.getData(player).ascendancy;
+        return data.soulLevel >= REQUIRED_SOUL_LEVEL_FOR_ASCENSION;
     }
     
     public static void performAscension(ServerPlayer player) {

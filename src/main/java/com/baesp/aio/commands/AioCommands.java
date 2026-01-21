@@ -238,11 +238,20 @@ public class AioCommands {
             .then(Commands.literal("confirm")
                 .executes(ctx -> {
                     ServerPlayer player = ctx.getSource().getPlayerOrException();
+                    if (!AscendancyManager.canAscend(player)) {
+                        ctx.getSource().sendFailure(Component.literal("§c✖ You need Soul Level " + AscendancyManager.REQUIRED_SOUL_LEVEL_FOR_ASCENSION + " to ascend!"));
+                        return 0;
+                    }
                     AscendancyManager.performAscension(player);
                     return 1;
                 })
             )
             .executes(ctx -> {
+                ServerPlayer player = ctx.getSource().getPlayerOrException();
+                if (!AscendancyManager.canAscend(player)) {
+                    ctx.getSource().sendFailure(Component.literal("§c✖ You need Soul Level " + AscendancyManager.REQUIRED_SOUL_LEVEL_FOR_ASCENSION + " to ascend!"));
+                    return 0;
+                }
                 ctx.getSource().sendSuccess(() -> Component.literal("§c⚠ WARNING: Ascension will reset your progress!"), false);
                 ctx.getSource().sendSuccess(() -> Component.literal("§7- Your inventory will be cleared"), false);
                 ctx.getSource().sendSuccess(() -> Component.literal("§7- Your ender chest will be cleared"), false);

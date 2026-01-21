@@ -139,6 +139,37 @@ public class ShopScreen extends SimpleGui {
             }
         }
         
+        // Guide button (if on first page)
+        if (currentPage == 0) {
+            setSlot(47, new GuiElementBuilder()
+                .setItem(Items.BOOK)
+                .setName(Component.literal("§e§l? Guide"))
+                .addLoreLine(Component.literal(""))
+                .addLoreLine(Component.literal("§6═══ Shop System ═══"))
+                .addLoreLine(Component.literal(""))
+                .addLoreLine(Component.literal("§e★ Earning Money:"))
+                .addLoreLine(Component.literal("§7• Mine ores & stone"))
+                .addLoreLine(Component.literal("§7• Chop trees"))
+                .addLoreLine(Component.literal("§7• Kill monsters"))
+                .addLoreLine(Component.literal("§7• Farm crops"))
+                .addLoreLine(Component.literal(""))
+                .addLoreLine(Component.literal("§a★ Purchasing:"))
+                .addLoreLine(Component.literal("§7• Click items to buy"))
+                .addLoreLine(Component.literal("§7• Requires enough money"))
+                .addLoreLine(Component.literal("§7• Items go to inventory"))
+                .addLoreLine(Component.literal(""))
+                .addLoreLine(Component.literal("§b★ Shop Categories:"))
+                .addLoreLine(Component.literal("§7• Tools & Weapons"))
+                .addLoreLine(Component.literal("§7• Armor Sets"))
+                .addLoreLine(Component.literal("§7• Food & Potions"))
+                .addLoreLine(Component.literal("§7• Building Materials"))
+                .addLoreLine(Component.literal(""))
+                .addLoreLine(Component.literal("§bClick to close this guide"))
+                .setCallback((index, type, action) -> setupGui())
+                .build()
+            );
+        }
+        
         // Navigation - Previous page
         if (currentPage > 0) {
             setSlot(45, new GuiElementBuilder()

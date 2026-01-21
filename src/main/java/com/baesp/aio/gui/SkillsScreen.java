@@ -70,9 +70,48 @@ public class SkillsScreen extends SimpleGui {
                 .addLoreLine(Component.literal(""))
                 .addLoreLine(Component.literal("§7Bonus: §a+" + String.format("%.0f", bonus) + "%"))
                 .addLoreLine(Component.literal("§8" + getSkillDescription(skill)))
+                .addLoreLine(Component.literal(""))
+                .addLoreLine(Component.literal("§eClick for details"))
+                .setCallback((index, type, action) -> {
+                    // Show detailed skill info
+                    player.sendSystemMessage(Component.literal(""));
+                    player.sendSystemMessage(Component.literal("§6═══ " + SkillsManager.formatSkillName(skill) + " Details §6═══"));
+                    player.sendSystemMessage(Component.literal("§7Level: §e" + level + "§7/§e10"));
+                    player.sendSystemMessage(Component.literal("§7XP: §b" + xp + "§7/§b" + xpNeeded));
+                    player.sendSystemMessage(Component.literal("§7Bonus: §a+" + String.format("%.0f", bonus) + "%"));
+                    player.sendSystemMessage(Component.literal("§7" + getSkillDescription(skill)));
+                    player.sendSystemMessage(Component.literal("§7XP Sources: §f" + getSkillSources(skill)));
+                    player.sendSystemMessage(Component.literal(""));
+                })
                 .build()
             );
         }
+        
+        // Guide button
+        setSlot(18, new GuiElementBuilder()
+            .setItem(Items.BOOK)
+            .setName(Component.literal("§e§l? Guide"))
+            .addLoreLine(Component.literal(""))
+            .addLoreLine(Component.literal("§6═══ Skills System ═══"))
+            .addLoreLine(Component.literal(""))
+            .addLoreLine(Component.literal("§e★ Leveling Skills:"))
+            .addLoreLine(Component.literal("§7• Perform related actions"))
+            .addLoreLine(Component.literal("§7• Gain skill XP"))
+            .addLoreLine(Component.literal("§7• Level up for bonuses"))
+            .addLoreLine(Component.literal(""))
+            .addLoreLine(Component.literal("§a★ Skill Bonuses:"))
+            .addLoreLine(Component.literal("§7• +5% bonus per level"))
+            .addLoreLine(Component.literal("§7• Max level: 10"))
+            .addLoreLine(Component.literal("§7• Permanent progress"))
+            .addLoreLine(Component.literal(""))
+            .addLoreLine(Component.literal("§b★ Click Skills:"))
+            .addLoreLine(Component.literal("§7• See detailed information"))
+            .addLoreLine(Component.literal("§7• View XP sources"))
+            .addLoreLine(Component.literal(""))
+            .addLoreLine(Component.literal("§bClick to close this guide"))
+            .setCallback((index, type, action) -> setupGui())
+            .build()
+        );
         
         // Close button
         setSlot(22, new GuiElementBuilder()
@@ -103,6 +142,18 @@ public class SkillsScreen extends SimpleGui {
             case SkillsData.SKILL_SMITHING -> "Better crafting results";
             case SkillsData.SKILL_WOODCUTTING -> "Faster wood chopping";
             case SkillsData.SKILL_MINING -> "Faster mining speed";
+            default -> "";
+        };
+    }
+    
+    private String getSkillSources(String skill) {
+        return switch (skill) {
+            case SkillsData.SKILL_FARMING -> "Harvesting crops, planting seeds";
+            case SkillsData.SKILL_COMBAT -> "Fighting monsters, killing mobs";
+            case SkillsData.SKILL_DEFENSE -> "Taking damage from enemies";
+            case SkillsData.SKILL_SMITHING -> "Crafting items, using anvils";
+            case SkillsData.SKILL_WOODCUTTING -> "Breaking logs, chopping trees";
+            case SkillsData.SKILL_MINING -> "Mining ores, breaking stone";
             default -> "";
         };
     }
