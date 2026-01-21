@@ -1,0 +1,65 @@
+plugins {
+    id 'fabric-loom' version '1.13-SNAPSHOT'
+    id 'java'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/aio.accesswidener")
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://maven.fabricmc.net/' }
+    maven { url 'https://maven.nucleoid.xyz/' }
+    maven { url 'https://maven.shedaniel.me/' }
+    maven { url 'https://maven.terraformersmc.com/' }
+    maven { url 'https://api.modrinth.com/maven' }
+    maven { url 'https://maven.isxander.dev/releases' }
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    // Minecraft + Fabric
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    
+    // SGUI for inventory-based GUIs
+    include(modImplementation("eu.pb4:sgui:${project.sgui_version}"))
+    
+    // ModMenu integration - optional, uncomment when compatible version available
+    // modImplementation "com.terraformersmc:modmenu:15.0.0"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+    withSourcesJar()
+}
+
+processResources {
+    inputs.property "version", project.version
+    
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+    options.encoding = "UTF-8"
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${project.base.archivesName.get()}" }
+    }
+}

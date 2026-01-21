@@ -1,0 +1,4 @@
+accessWidener v2 named
+
+# Note: Many 1.20.x field names don't exist in 1.21.11
+# Using method-based approach instead of field access where possible

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "aio",
+  "version": "${version}",
+  "name": "All-in-One Mod",
+  "description": "A private 'All-in-One' modpack compiled for personal use, heavily inspired by the incredible work of Serilum, MiraculixxT, Henkelmax, and others. Combines Ascendancy, RPG features, Vein Mining, Quality-of-Life utilities, and much more into one comprehensive mod.",
+  "authors": ["Uipg9"],
+  "contact": {
+    "sources": "https://github.com/Uipg9/aio-mod"
+  },
+  "license": "MIT",
+  "icon": "assets/aio/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.baesp.aio.AioMod"],
+    "client": ["com.baesp.aio.AioModClient"]
+  },
+  "mixins": ["aio.mixins.json"],
+  "accessWidener": "aio.accesswidener",
+  "depends": {
+    "fabricloader": ">=0.18.4",
+    "fabric-api": ">=0.141.1",
+    "minecraft": ">=1.21.11",
+    "java": ">=21"
+  },
+  "suggests": {
+    "sodium": "*",
+    "lithium": "*",
+    "iris": "*",
+    "indium": "*",
+    "ferritecore": "*",
+    "entityculling": "*",
+    "immediatelyfast": "*",
+    "sodium-extra": "*",
+    "dynamic-fps": "*",
+    "moreculling": "*",
+    "memoryleakfix": "*",
+    "clumps": "*",
+    "modmenu": "*"
+  }
+}

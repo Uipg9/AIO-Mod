@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "com.baesp.aio.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "PlayerMixin",
+    "FurnaceResultSlotMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
