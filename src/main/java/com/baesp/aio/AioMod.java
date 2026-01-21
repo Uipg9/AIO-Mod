@@ -16,6 +16,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +51,7 @@ public class AioMod implements ModInitializer {
         VeinMiningManager.register();
         StarterKitManager.register();
         AutoReplantManager.register();
+        AutoToolSwitchManager.register();
         SleepSoonerManager.register();
         DeathSafetyManager.register();
         InfiniteTradingManager.register();
@@ -74,7 +76,10 @@ public class AioMod implements ModInitializer {
         
         // Player connection events
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            PlayerDataManager.loadPlayer(handler.getPlayer());
+            ServerPlayer player = handler.getPlayer();
+            PlayerDataManager.loadPlayer(player);
+            // Send initial data sync to client so HUD and messages work from the start
+            server.execute(() -> AioNetwork.sendSyncData(player));
         });
         
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
