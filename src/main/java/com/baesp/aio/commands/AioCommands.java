@@ -10,6 +10,7 @@ import com.baesp.aio.gui.SkillsScreen;
 import com.baesp.aio.rpg.SkillsData;
 import com.baesp.aio.rpg.economy.EconomyManager;
 import com.baesp.aio.squat.SquatGrowManager;
+import com.baesp.aio.warp.WarpManager;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
@@ -44,6 +45,7 @@ public class AioCommands {
             registerEconomyCommands(dispatcher);
             registerSkillsCommands(dispatcher);
             registerAscendancyCommands(dispatcher);
+            registerWarpCommands(dispatcher);
         });
     }
     
@@ -428,5 +430,83 @@ public class AioCommands {
         
         // Default: 1 coin per item
         return 1;
+    }
+    
+    // ============= WARP COMMANDS =============
+    
+    private static void registerWarpCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
+        // /warp - List warps
+        dispatcher.register(Commands.literal("warp")
+            .executes(context -> {
+                if (context.getSource().getEntity() instanceof ServerPlayer player) {
+                    var warps = WarpManager.getWarps(player);
+                    if (warps.isEmpty()) {
+                        player.sendSystemMessage(Component.literal("§7You have no warps. Use §e/setwarp <name>§7 to create one!"));
+                    } else {
+                        player.sendSystemMessage(Component.literal("§6§l✦ Your Warps:"));
+                        for (WarpManager.WarpPoint warp : warps) {
+                            player.sendSystemMessage(Component.literal("§7 • §b" + warp.name + " §8(" + warp.dimension + ")"));
+                        }
+                        player.sendSystemMessage(Component.literal("§7Use §e/warp <name>§7 to teleport"));
+                    }
+                }
+                return 1;
+            })
+            .then(Commands.argument("name", StringArgumentType.greedyString())
+                .executes(context -> {
+                    if (context.getSource().getEntity() instanceof ServerPlayer player) {
+                        String name = StringArgumentType.getString(context, "name");
+                        WarpManager.teleportToWarp(player, name);
+                    }
+                    return 1;
+                })
+            )
+        );
+        
+        // /setwarp <name> - Create a warp
+        dispatcher.register(Commands.literal("setwarp")
+            .then(Commands.argument("name", StringArgumentType.greedyString())
+                .executes(context -> {
+                    if (context.getSource().getEntity() instanceof ServerPlayer player) {
+                        String name = StringArgumentType.getString(context, "name");
+                        WarpManager.addWarp(player, name);
+                    }
+                    return 1;
+                })
+            )
+        );
+        
+        // /delwarp <name> - Delete a warp
+        dispatcher.register(Commands.literal("delwarp")
+            .then(Commands.argument("name", StringArgumentType.greedyString())
+                .executes(context -> {
+                    if (context.getSource().getEntity() instanceof ServerPlayer player) {
+                        String name = StringArgumentType.getString(context, "name");
+                        WarpManager.removeWarp(player, name);
+                    }
+                    return 1;
+                })
+            )
+        );
+        
+        // /warphub - Enter the warp hub dimension
+        dispatcher.register(Commands.literal("warphub")
+            .executes(context -> {
+                if (context.getSource().getEntity() instanceof ServerPlayer player) {
+                    WarpManager.teleportToWarpHub(player);
+                }
+                return 1;
+            })
+        );
+        
+        // /back - Return to previous location (from warp hub)
+        dispatcher.register(Commands.literal("back")
+            .executes(context -> {
+                if (context.getSource().getEntity() instanceof ServerPlayer player) {
+                    WarpManager.returnToPreviousLocation(player);
+                }
+                return 1;
+            })
+        );
     }
 }

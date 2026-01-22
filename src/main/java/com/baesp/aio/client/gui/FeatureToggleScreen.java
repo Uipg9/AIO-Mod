@@ -132,7 +132,19 @@ public class FeatureToggleScreen extends Screen {
                 AioNetworkClient.sendRequestData();
                 this.minecraft.setScreen(new AscendancyScreen());
             }
-        ).bounds(centerX - BUTTON_WIDTH/2, y, BUTTON_WIDTH, BUTTON_HEIGHT).build());
+        ).bounds(centerX - BUTTON_WIDTH/2, y, BUTTON_WIDTH/2 - 5, BUTTON_HEIGHT).build());
+        
+        // Open Warp Hub
+        addRenderableWidget(Button.builder(
+            Component.literal("§d🌀 Warp Hub"),
+            btn -> {
+                // Send command to server to teleport to warp hub
+                if (this.minecraft.player != null) {
+                    this.minecraft.player.connection.sendCommand("warphub");
+                    this.onClose();
+                }
+            }
+        ).bounds(centerX + 5, y, BUTTON_WIDTH/2 - 5, BUTTON_HEIGHT).build());
         y += BUTTON_SPACING * 2;
         
         // Close Button
