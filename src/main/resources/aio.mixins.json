@@ -4,9 +4,13 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "PlayerMixin",
-    "FurnaceResultSlotMixin"
+    "FurnaceResultSlotMixin",
+    "FarmBlockMixin",
+    "MerchantMenuAccessor",
+    "VillagerAccessor"
   ],
   "client": [
+    "client.MerchantScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -23,6 +23,7 @@ public class AioNetwork {
     public static final Identifier BUY_ITEM_ID = Identifier.fromNamespaceAndPath(AioMod.MOD_ID, "buy_item");
     public static final Identifier BUY_UPGRADE_ID = Identifier.fromNamespaceAndPath(AioMod.MOD_ID, "buy_upgrade");
     public static final Identifier ASCEND_ID = Identifier.fromNamespaceAndPath(AioMod.MOD_ID, "ascend");
+    public static final Identifier CYCLE_TRADES_ID = Identifier.fromNamespaceAndPath(AioMod.MOD_ID, "cycle_trades");
     
     // Request data packet (C2S)
     public record RequestDataPacket() implements CustomPacketPayload {
@@ -151,6 +152,17 @@ public class AioNetwork {
         }
     }
     
+    // Cycle trades packet (C2S)
+    public record CycleTradesPacket() implements CustomPacketPayload {
+        public static final Type<CycleTradesPacket> TYPE = new Type<>(CYCLE_TRADES_ID);
+        public static final StreamCodec<FriendlyByteBuf, CycleTradesPacket> CODEC = StreamCodec.unit(new CycleTradesPacket());
+        
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+    
     public static void registerServer() {
         // Register C2S packet types
         PayloadTypeRegistry.playC2S().register(RequestDataPacket.TYPE, RequestDataPacket.CODEC);
@@ -159,6 +171,7 @@ public class AioNetwork {
         PayloadTypeRegistry.playC2S().register(BuyItemPacket.TYPE, BuyItemPacket.CODEC);
         PayloadTypeRegistry.playC2S().register(BuyUpgradePacket.TYPE, BuyUpgradePacket.CODEC);
         PayloadTypeRegistry.playC2S().register(AscendPacket.TYPE, AscendPacket.CODEC);
+        PayloadTypeRegistry.playC2S().register(CycleTradesPacket.TYPE, CycleTradesPacket.CODEC);
         
         // Register S2C packet types
         PayloadTypeRegistry.playS2C().register(SyncDataPacket.TYPE, SyncDataPacket.CODEC);
@@ -214,6 +227,14 @@ public class AioNetwork {
             context.server().execute(() -> {
                 // Use ShopManager to process purchase
                 com.baesp.aio.rpg.economy.ShopManager.buyItem(player, packet.category(), packet.itemIndex());
+            });
+        });
+        
+        // Handle trade cycling
+        ServerPlayNetworking.registerGlobalReceiver(CycleTradesPacket.TYPE, (packet, context) -> {
+            ServerPlayer player = context.player();
+            context.server().execute(() -> {
+                com.baesp.aio.features.TradeCyclingManager.cycleTrades(player);
             });
         });
         

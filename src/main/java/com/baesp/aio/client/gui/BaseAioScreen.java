@@ -8,6 +8,9 @@ import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Base screen class using pure DrawContext API
  * No external GUI libraries - full control over rendering
@@ -19,6 +22,10 @@ public abstract class BaseAioScreen extends Screen {
     protected int windowHeight;
     protected int windowX;
     protected int windowY;
+    
+    // Help system
+    protected boolean showingHelp = false;
+    protected boolean helpButtonHovered = false;
     
     // Color palette - AIO Theme
     protected static final int COLOR_BACKGROUND = 0xE8101018;
@@ -48,6 +55,11 @@ public abstract class BaseAioScreen extends Screen {
         calculateWindowSize();
         clearWidgets();
         addButtons();
+        
+        // Add help button as a widget
+        addRenderableWidget(Button.builder(Component.literal(""), btn -> {
+            onHelpButtonClick();
+        }).bounds(windowX + 8, windowY + 8, 16, 16).build());
     }
     
     /**
@@ -84,8 +96,105 @@ public abstract class BaseAioScreen extends Screen {
         // 4. Render buttons (vanilla widgets)
         super.render(graphics, mouseX, mouseY, delta);
         
-        // 5. Custom content on top
-        renderContent(graphics, mouseX, mouseY, delta);
+        // 5. Custom content on top (unless showing help)
+        if (!showingHelp) {
+            renderContent(graphics, mouseX, mouseY, delta);
+        }
+        
+        // 6. Draw help button
+        renderHelpButton(graphics, mouseX, mouseY);
+        
+        // 7. Draw help overlay if showing
+        if (showingHelp) {
+            renderHelpOverlay(graphics, mouseX, mouseY);
+        }
+    }
+    
+    /**
+     * Renders the help button (?) in top-left corner
+     */
+    protected void renderHelpButton(GuiGraphics graphics, int mouseX, int mouseY) {
+        int helpX = windowX + 8;
+        int helpY = windowY + 8;
+        int helpSize = 16;
+        
+        helpButtonHovered = isMouseOver(mouseX, mouseY, helpX, helpY, helpSize, helpSize);
+        
+        // Button background
+        int bgColor = showingHelp ? 0xCC336633 : (helpButtonHovered ? 0xCC444466 : 0xCC222244);
+        graphics.fill(helpX, helpY, helpX + helpSize, helpY + helpSize, bgColor);
+        
+        // Border
+        int borderColor = showingHelp ? COLOR_TEXT_GREEN : (helpButtonHovered ? COLOR_TEXT_AQUA : 0xFF666688);
+        drawBorder(graphics, helpX, helpY, helpSize, helpSize, borderColor);
+        
+        // Question mark
+        int textColor = showingHelp ? COLOR_TEXT_GREEN : (helpButtonHovered ? COLOR_TEXT_AQUA : COLOR_TEXT_WHITE);
+        drawCenteredText(graphics, "?", helpX + helpSize / 2, helpY + 4, textColor);
+        
+        // Tooltip when hovered (and not showing help)
+        if (helpButtonHovered && !showingHelp) {
+            List<String> tip = new ArrayList<>();
+            tip.add("§eClick for Help Guide");
+            tip.add("§7Learn how to use this menu");
+            drawTooltip(graphics, mouseX, mouseY, tip);
+        }
+    }
+    
+    /**
+     * Renders the help overlay with instructions
+     */
+    protected void renderHelpOverlay(GuiGraphics graphics, int mouseX, int mouseY) {
+        List<String> helpLines = getHelpText();
+        if (helpLines.isEmpty()) return;
+        
+        int padding = 20;
+        int overlayX = windowX + padding;
+        int overlayY = windowY + 35;
+        int overlayW = windowWidth - (padding * 2);
+        int overlayH = windowHeight - 55;
+        
+        // Dark overlay background
+        graphics.fill(overlayX, overlayY, overlayX + overlayW, overlayY + overlayH, 0xF0101020);
+        
+        // Border
+        drawBorder(graphics, overlayX, overlayY, overlayW, overlayH, COLOR_TEXT_AQUA);
+        
+        // Title
+        String helpTitle = "§b§l📖 HELP GUIDE";
+        drawCenteredText(graphics, helpTitle, windowX + windowWidth / 2, overlayY + 8, COLOR_TEXT_WHITE);
+        
+        // Divider
+        graphics.fill(overlayX + 10, overlayY + 22, overlayX + overlayW - 10, overlayY + 23, 0x80FFFFFF);
+        
+        // Help text
+        int lineY = overlayY + 30;
+        for (String line : helpLines) {
+            if (lineY + 11 > overlayY + overlayH - 25) break; // Don't overflow
+            graphics.drawString(font, line, overlayX + 10, lineY, COLOR_TEXT_WHITE, true);
+            lineY += 12;
+        }
+        
+        // Close instruction
+        String closeText = "§7Click §e?§7 or press §eESC§7 to close help";
+        drawCenteredText(graphics, closeText, windowX + windowWidth / 2, overlayY + overlayH - 15, COLOR_TEXT_GRAY);
+    }
+    
+    /**
+     * Override this to provide help text for your screen
+     */
+    protected List<String> getHelpText() {
+        List<String> help = new ArrayList<>();
+        help.add("§7No help available for this screen.");
+        return help;
+    }
+    
+    /**
+     * Handle help button click
+     */
+    protected void onHelpButtonClick() {
+        showingHelp = !showingHelp;
+        playClickSound();
     }
     
     protected void drawFancyWindow(GuiGraphics graphics) {

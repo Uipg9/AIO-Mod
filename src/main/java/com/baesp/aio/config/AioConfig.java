@@ -56,6 +56,16 @@ public class AioConfig {
     public int squatGrowMultiplier = 4;
     public boolean requireHoeForSquatGrow = false;
     
+    // === FARMING FEATURES CONFIG ===
+    public boolean rightClickHarvestEnabled = true;
+    public boolean noCropTrampling = true;
+    public int rightClickHarvestSoulXp = 2;  // Soul XP per harvest
+    public long rightClickHarvestMoney = 1;  // Money per harvest
+    
+    // === DEATH SAFETY CONFIG ===
+    public boolean deathSafetyEnabled = false;  // Keep inventory on death (disabled by default)
+    public float deathXpKeepPercent = 0.5f;    // Keep 50% of XP on death
+    
     // === SLEEP WARP CONFIG ===
     public boolean sleepWarpEnabled = true;
     public int sleepWarpMaxTicksAdded = 40;

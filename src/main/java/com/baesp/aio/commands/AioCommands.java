@@ -92,6 +92,73 @@ public class AioCommands {
     }
     
     private static void registerEconomyCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
+        // /sell - Sell item in hand
+        dispatcher.register(Commands.literal("sell")
+            .executes(ctx -> {
+                ServerPlayer player = ctx.getSource().getPlayerOrException();
+                net.minecraft.world.item.ItemStack heldItem = player.getMainHandItem();
+                
+                if (heldItem.isEmpty()) {
+                    ctx.getSource().sendFailure(Component.literal("§cYou must be holding an item to sell!"));
+                    return 0;
+                }
+                
+                // Calculate sell price (roughly 30% of what it would cost to buy)
+                long sellPrice = calculateSellPrice(heldItem);
+                int count = heldItem.getCount();
+                long totalPrice = sellPrice * count;
+                
+                if (totalPrice <= 0) {
+                    ctx.getSource().sendFailure(Component.literal("§cThis item cannot be sold!"));
+                    return 0;
+                }
+                
+                // Remove item from hand and give money
+                String itemName = heldItem.getHoverName().getString();
+                player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+                EconomyManager.deposit(player, totalPrice);
+                
+                ctx.getSource().sendSuccess(() -> 
+                    Component.literal("§aSold §f" + count + "x " + itemName + " §afor §e$" + EconomyManager.formatMoney(totalPrice)), false);
+                return 1;
+            })
+            // /sell all - Sell entire inventory
+            .then(Commands.literal("all")
+                .executes(ctx -> {
+                    ServerPlayer player = ctx.getSource().getPlayerOrException();
+                    long totalEarned = 0;
+                    int itemsSold = 0;
+                    
+                    // Go through entire inventory
+                    for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                        net.minecraft.world.item.ItemStack stack = player.getInventory().getItem(i);
+                        if (stack.isEmpty()) continue;
+                        
+                        long sellPrice = calculateSellPrice(stack);
+                        if (sellPrice > 0) {
+                            int count = stack.getCount();
+                            long price = sellPrice * count;
+                            totalEarned += price;
+                            itemsSold += count;
+                            player.getInventory().setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+                        }
+                    }
+                    
+                    if (itemsSold == 0) {
+                        ctx.getSource().sendFailure(Component.literal("§cNo sellable items in inventory!"));
+                        return 0;
+                    }
+                    
+                    EconomyManager.deposit(player, totalEarned);
+                    final long finalEarned = totalEarned;
+                    final int finalSold = itemsSold;
+                    ctx.getSource().sendSuccess(() -> 
+                        Component.literal("§aSold §f" + finalSold + " items §afor §e$" + EconomyManager.formatMoney(finalEarned)), false);
+                    return 1;
+                })
+            )
+        );
+        
         // /balance (/bal)
         dispatcher.register(Commands.literal("balance")
             .executes(ctx -> {
@@ -273,5 +340,93 @@ public class AioCommands {
                 )
             )
         );
+    }
+    
+    /**
+     * Calculate sell price for any item
+     * Base prices + material bonuses
+     */
+    private static long calculateSellPrice(net.minecraft.world.item.ItemStack stack) {
+        net.minecraft.world.item.Item item = stack.getItem();
+        String itemName = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).getPath();
+        
+        // Special items with fixed prices
+        if (item == net.minecraft.world.item.Items.DIAMOND) return 50;
+        if (item == net.minecraft.world.item.Items.DIAMOND_BLOCK) return 450;
+        if (item == net.minecraft.world.item.Items.GOLD_INGOT) return 15;
+        if (item == net.minecraft.world.item.Items.GOLD_BLOCK) return 135;
+        if (item == net.minecraft.world.item.Items.IRON_INGOT) return 10;
+        if (item == net.minecraft.world.item.Items.IRON_BLOCK) return 90;
+        if (item == net.minecraft.world.item.Items.COPPER_INGOT) return 5;
+        if (item == net.minecraft.world.item.Items.COPPER_BLOCK) return 45;
+        if (item == net.minecraft.world.item.Items.EMERALD) return 30;
+        if (item == net.minecraft.world.item.Items.EMERALD_BLOCK) return 270;
+        if (item == net.minecraft.world.item.Items.LAPIS_LAZULI) return 3;
+        if (item == net.minecraft.world.item.Items.REDSTONE) return 2;
+        if (item == net.minecraft.world.item.Items.COAL) return 2;
+        if (item == net.minecraft.world.item.Items.NETHERITE_INGOT) return 500;
+        if (item == net.minecraft.world.item.Items.NETHERITE_BLOCK) return 4500;
+        if (item == net.minecraft.world.item.Items.ANCIENT_DEBRIS) return 200;
+        
+        // Logs and planks
+        if (itemName.endsWith("_log") || itemName.endsWith("_wood")) return 1;
+        if (itemName.endsWith("_planks")) return 1;
+        
+        // Ores
+        if (itemName.contains("ore")) return 8;
+        if (itemName.contains("deepslate") && itemName.contains("ore")) return 10;
+        if (itemName.contains("raw_")) return 8;
+        
+        // Food
+        if (item == net.minecraft.world.item.Items.BREAD) return 1;
+        if (item == net.minecraft.world.item.Items.COOKED_BEEF) return 3;
+        if (item == net.minecraft.world.item.Items.COOKED_PORKCHOP) return 3;
+        if (item == net.minecraft.world.item.Items.COOKED_CHICKEN) return 2;
+        if (item == net.minecraft.world.item.Items.COOKED_MUTTON) return 2;
+        if (item == net.minecraft.world.item.Items.COOKED_COD) return 2;
+        if (item == net.minecraft.world.item.Items.COOKED_SALMON) return 3;
+        if (item == net.minecraft.world.item.Items.GOLDEN_APPLE) return 100;
+        if (item == net.minecraft.world.item.Items.ENCHANTED_GOLDEN_APPLE) return 2500;
+        
+        // Tools (based on material)
+        if (itemName.contains("diamond_")) return 150;
+        if (itemName.contains("iron_")) return 30;
+        if (itemName.contains("gold_") || itemName.contains("golden_")) return 20;
+        if (itemName.contains("stone_")) return 5;
+        if (itemName.contains("wooden_")) return 2;
+        if (itemName.contains("netherite_")) return 600;
+        
+        // Armor
+        if (itemName.contains("leather_")) return 5;
+        if (itemName.contains("chainmail_")) return 25;
+        
+        // Building blocks
+        if (itemName.endsWith("_block")) return 1;
+        if (item == net.minecraft.world.item.Items.COBBLESTONE) return 1;
+        if (item == net.minecraft.world.item.Items.STONE) return 1;
+        if (item == net.minecraft.world.item.Items.DIRT) return 1;
+        if (item == net.minecraft.world.item.Items.SAND) return 1;
+        if (item == net.minecraft.world.item.Items.GRAVEL) return 1;
+        if (item == net.minecraft.world.item.Items.GLASS) return 2;
+        if (itemName.contains("brick")) return 2;
+        
+        // Mob drops
+        if (item == net.minecraft.world.item.Items.ROTTEN_FLESH) return 1;
+        if (item == net.minecraft.world.item.Items.BONE) return 2;
+        if (item == net.minecraft.world.item.Items.GUNPOWDER) return 5;
+        if (item == net.minecraft.world.item.Items.ENDER_PEARL) return 25;
+        if (item == net.minecraft.world.item.Items.BLAZE_ROD) return 20;
+        if (item == net.minecraft.world.item.Items.GHAST_TEAR) return 50;
+        if (item == net.minecraft.world.item.Items.SLIME_BALL) return 5;
+        if (item == net.minecraft.world.item.Items.LEATHER) return 3;
+        if (item == net.minecraft.world.item.Items.FEATHER) return 1;
+        if (item == net.minecraft.world.item.Items.STRING) return 2;
+        if (item == net.minecraft.world.item.Items.SPIDER_EYE) return 3;
+        if (item == net.minecraft.world.item.Items.PHANTOM_MEMBRANE) return 15;
+        if (item == net.minecraft.world.item.Items.WITHER_SKELETON_SKULL) return 200;
+        if (item == net.minecraft.world.item.Items.NETHER_STAR) return 1000;
+        
+        // Default: 1 coin per item
+        return 1;
     }
 }

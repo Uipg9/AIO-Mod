@@ -51,6 +51,8 @@ public class AioMod implements ModInitializer {
         VeinMiningManager.register();
         StarterKitManager.register();
         AutoReplantManager.register();
+        RightClickHarvestManager.register();
+        NoCropTrampleManager.register();
         AutoToolSwitchManager.register();
         SleepSoonerManager.register();
         DeathSafetyManager.register();
@@ -60,6 +62,7 @@ public class AioMod implements ModInitializer {
         SilkierTouchManager.register();
         PetNamesManager.register();
         DespawningEggsManager.register();
+        FastLeafDecayManager.register();
         
         // Register commands
         AioCommands.register();
@@ -78,8 +81,12 @@ public class AioMod implements ModInitializer {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             ServerPlayer player = handler.getPlayer();
             PlayerDataManager.loadPlayer(player);
-            // Send initial data sync to client so HUD and messages work from the start
-            server.execute(() -> AioNetwork.sendSyncData(player));
+            // Apply upgrade effects (vitality, swiftness, etc.) on login
+            server.execute(() -> {
+                AscendancyManager.applyUpgradeEffects(player);
+                // Send initial data sync to client so HUD and messages work from the start
+                AioNetwork.sendSyncData(player);
+            });
         });
         
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {

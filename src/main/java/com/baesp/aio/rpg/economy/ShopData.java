@@ -11,12 +11,12 @@ public class ShopData {
     
     // Categories
     public static final String[] CATEGORIES = {
-        "Tools", "Armor", "Weapons", "Food", "Blocks", 
+        "Tools", "Armor", "Weapons", "Food", "Farming", "Blocks", 
         "Ores & Gems", "Spawn Eggs", "Utility", "Enchanted", "Rare"
     };
     
     public static final String[] CATEGORY_ICONS = {
-        "§6⛏", "§9🛡", "§c⚔", "§a🍎", "§e⬛", 
+        "§6⛏", "§9🛡", "§c⚔", "§a🍎", "§2⚘", "§e⬛", 
         "§b💎", "§d🥚", "§f⚡", "§5✨", "§6★"
     };
     
@@ -25,6 +25,7 @@ public class ShopData {
         0xFF5555FF, // Armor - Blue
         0xFFFF5555, // Weapons - Red
         0xFF55FF55, // Food - Green
+        0xFF00AA00, // Farming - Dark Green
         0xFFFFFF55, // Blocks - Yellow
         0xFF55FFFF, // Ores - Cyan
         0xFFFF55FF, // Spawn Eggs - Magenta
@@ -98,6 +99,33 @@ public class ShopData {
             new ShopItem("Pumpkin Pie x8", "minecraft:pumpkin_pie", 50, "§6🥧", 8),
             new ShopItem("Honey Bottle x4", "minecraft:honey_bottle", 40, "§6🍯", 4),
             new ShopItem("Suspicious Stew", "minecraft:suspicious_stew", 100, "§d🍲")
+        },
+        // Farming
+        {
+            new ShopItem("Wheat Seeds x32", "minecraft:wheat_seeds", 10, "§e🌱", 32),
+            new ShopItem("Beetroot Seeds x32", "minecraft:beetroot_seeds", 15, "§c🌱", 32),
+            new ShopItem("Melon Seeds x16", "minecraft:melon_seeds", 20, "§a🌱", 16),
+            new ShopItem("Pumpkin Seeds x16", "minecraft:pumpkin_seeds", 20, "§6🌱", 16),
+            new ShopItem("Carrot x16", "minecraft:carrot", 25, "§6🥕", 16),
+            new ShopItem("Potato x16", "minecraft:potato", 25, "§e🥔", 16),
+            new ShopItem("Bone Meal x32", "minecraft:bone_meal", 30, "§f⬤", 32),
+            new ShopItem("Composter", "minecraft:composter", 30, "§6🗑"),
+            new ShopItem("Hay Bale x16", "minecraft:hay_block", 50, "§e◼", 16),
+            new ShopItem("Oak Sapling x16", "minecraft:oak_sapling", 20, "§2🌲", 16),
+            new ShopItem("Spruce Sapling x16", "minecraft:spruce_sapling", 20, "§4🌲", 16),
+            new ShopItem("Birch Sapling x16", "minecraft:birch_sapling", 20, "§f🌲", 16),
+            new ShopItem("Jungle Sapling x16", "minecraft:jungle_sapling", 30, "§2🌲", 16),
+            new ShopItem("Dark Oak Sapling x16", "minecraft:dark_oak_sapling", 30, "§8🌲", 16),
+            new ShopItem("Acacia Sapling x16", "minecraft:acacia_sapling", 25, "§6🌲", 16),
+            new ShopItem("Cherry Sapling x8", "minecraft:cherry_sapling", 50, "§d🌲", 8),
+            new ShopItem("Mangrove Propagule x8", "minecraft:mangrove_propagule", 40, "§2🌱", 8),
+            new ShopItem("Cocoa Beans x16", "minecraft:cocoa_beans", 30, "§6⬤", 16),
+            new ShopItem("Sugar Cane x16", "minecraft:sugar_cane", 25, "§a|", 16),
+            new ShopItem("Bamboo x32", "minecraft:bamboo", 20, "§2|", 32),
+            new ShopItem("Cactus x8", "minecraft:cactus", 25, "§2🌵", 8),
+            new ShopItem("Sweet Berries x16", "minecraft:sweet_berries", 30, "§c⬤", 16),
+            new ShopItem("Glow Berries x8", "minecraft:glow_berries", 50, "§e✦", 8),
+            new ShopItem("Nether Wart x16", "minecraft:nether_wart", 80, "§4⬤", 16)
         },
         // Blocks
         {

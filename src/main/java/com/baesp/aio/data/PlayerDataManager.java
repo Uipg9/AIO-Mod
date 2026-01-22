@@ -116,7 +116,7 @@ public class PlayerDataManager {
         public EconomyData economy = new EconomyData();
         
         // Squat Grow toggle
-        public boolean squatGrowEnabled = true;
+        public boolean squatGrowEnabled = false;
         
         public void load(CompoundTag tag) {
             if (tag.contains("Ascendancy")) {
@@ -128,7 +128,7 @@ public class PlayerDataManager {
             if (tag.contains("Economy")) {
                 economy.load(tag.getCompoundOrEmpty("Economy"));
             }
-            squatGrowEnabled = tag.getBooleanOr("SquatGrowEnabled", true);
+            squatGrowEnabled = tag.getBooleanOr("SquatGrowEnabled", false);
         }
         
         public void save(CompoundTag tag) {

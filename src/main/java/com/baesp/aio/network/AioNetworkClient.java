@@ -72,4 +72,10 @@ public class AioNetworkClient {
             ClientPlayNetworking.send(new AioNetwork.BuyItemPacket(category, itemIndex));
         }
     }
+    
+    public static void sendCycleTrades() {
+        if (ClientPlayNetworking.canSend(AioNetwork.CycleTradesPacket.TYPE)) {
+            ClientPlayNetworking.send(new AioNetwork.CycleTradesPacket());
+        }
+    }
 }

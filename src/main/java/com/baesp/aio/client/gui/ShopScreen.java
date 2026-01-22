@@ -383,4 +383,34 @@ public class ShopScreen extends BaseAioScreen {
         
         return super.mouseScrolled(mouseX, mouseY, hAmount, vAmount);
     }
+    
+    @Override
+    protected List<String> getHelpText() {
+        List<String> help = new ArrayList<>();
+        help.add("§6§l⭐ SHOP GUIDE ⭐");
+        help.add("");
+        help.add("§e◆ HOW TO BUY:");
+        help.add("§7  • Click on any item to purchase it");
+        help.add("§7  • Items are added to your inventory");
+        help.add("§7  • Your balance is shown at the top");
+        help.add("");
+        help.add("§e◆ CATEGORIES:");
+        help.add("§7  • Use §f◄ ►§7 arrows to scroll categories");
+        help.add("§7  • Click a tab to switch categories");
+        help.add("§7  • 11 categories including Farming!");
+        help.add("");
+        help.add("§e◆ SCROLLING:");
+        help.add("§7  • Use §f▲ ▼§7 buttons to scroll items");
+        help.add("§7  • Or use your §fMouse Wheel§7");
+        help.add("");
+        help.add("§e◆ EARNING MONEY:");
+        help.add("§7  • Kill mobs: §a+$2-5");
+        help.add("§7  • Vein mine ores: §a+$ varies");
+        help.add("§7  • Use §f/sell§7 with item in hand");
+        help.add("§7  • Use §f/sell all§7 to sell inventory");
+        help.add("");
+        help.add("§e◆ KEYBIND:");
+        help.add("§7  • Press §eJ§7 to toggle this menu");
+        return help;
+    }
 }

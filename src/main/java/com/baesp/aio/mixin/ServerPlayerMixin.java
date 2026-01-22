@@ -2,6 +2,7 @@ package com.baesp.aio.mixin;
 
 import com.baesp.aio.rpg.SkillsData;
 import com.baesp.aio.rpg.SkillsManager;
+import com.baesp.aio.villagespawn.VillageSpawnManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import org.spongepowered.asm.mixin.Mixin;

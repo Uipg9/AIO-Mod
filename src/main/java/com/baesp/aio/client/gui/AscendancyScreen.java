@@ -1,5 +1,6 @@
 package com.baesp.aio.client.gui;
 
+import com.baesp.aio.network.AioNetworkClient;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
@@ -85,20 +86,23 @@ public class AscendancyScreen extends BaseAioScreen {
             }
         }).bounds(windowX + windowWidth - 35, windowY + 290, 20, 16).build());
         
-        // Ascend button (handled in render)
+        // Ascend button - ACTUALLY ASCENDS NOW
         addRenderableWidget(Button.builder(Component.literal(""), btn -> {
             // Send ascension request to server
+            AioNetworkClient.sendAscend();
             playClickSound();
+            onClose(); // Close menu after ascending
         }).bounds(windowX + windowWidth / 2 - 60, windowY + windowHeight - 45, 120, 28).build());
         
-        // Upgrade buttons
+        // Upgrade buttons - ACTUALLY PURCHASE NOW
         for (int i = 0; i < VISIBLE_UPGRADES; i++) {
             final int idx = i;
             int btnY = windowY + 130 + (i * 32);
             addRenderableWidget(Button.builder(Component.literal(""), btn -> {
                 int upgradeIndex = scrollOffset + idx;
                 if (upgradeIndex < UPGRADE_NAMES.length) {
-                    // Send upgrade request to server
+                    // Send upgrade purchase request to server
+                    AioNetworkClient.sendBuyUpgrade(upgradeIndex);
                     playClickSound();
                 }
             }).bounds(windowX + 15, btnY, windowWidth - 60, 28).build());
@@ -365,5 +369,41 @@ public class AscendancyScreen extends BaseAioScreen {
         }
         
         return super.mouseScrolled(mouseX, mouseY, hAmount, vAmount);
+    }
+    
+    @Override
+    protected List<String> getHelpText() {
+        List<String> help = new ArrayList<>();
+        help.add("§5§l✦ ASCENDANCY GUIDE ✦");
+        help.add("");
+        help.add("§e◆ WHAT IS ASCENSION?");
+        help.add("§7  Prestige system! Reset progress");
+        help.add("§7  for permanent upgrades.");
+        help.add("");
+        help.add("§e◆ HOW TO ASCEND:");
+        help.add("§7  1. Reach §dSoul Level 5§7 or higher");
+        help.add("§7  2. Click the §5⚜ ASCEND ⚜§7 button");
+        help.add("§7  3. You'll be teleported to a new area!");
+        help.add("");
+        help.add("§e◆ WHAT HAPPENS:");
+        help.add("§c  • Soul Level resets to 1");
+        help.add("§c  • Inventory is cleared");
+        help.add("§a  • Gain §e3 Prestige Points");
+        help.add("§a  • Upgrades are §lPERMANENT!");
+        help.add("");
+        help.add("§e◆ BUYING UPGRADES:");
+        help.add("§7  • Click an upgrade to purchase");
+        help.add("§7  • Cost shown in §ePP§7 (Prestige Points)");
+        help.add("§7  • Hover for description");
+        help.add("");
+        help.add("§e◆ UPGRADES:");
+        help.add("§c  ❤ Vitality§7 - More health");
+        help.add("§b  ⚡ Swiftness§7 - Move faster");
+        help.add("§6  ⚔ Might§7 - Deal more damage");
+        help.add("§7  ...and more! Scroll to see all.");
+        help.add("");
+        help.add("§e◆ KEYBIND:");
+        help.add("§7  • Press §eM§7 to toggle this menu");
+        return help;
     }
 }

@@ -44,15 +44,17 @@ public class DeathSafetyManager {
     // Store death locations for respawn message
     private static final Map<UUID, DeathLocation> deathLocations = new HashMap<>();
     
-    // Configuration
-    private static final boolean KEEP_INVENTORY = true; // Full keep inventory
-    private static final boolean CREATE_DEATH_CHEST = false; // Alternative: death chest mode
-    private static final float XP_KEEP_PERCENT = 0.5f; // Keep 50% of XP
-    
     public static void register() {
+        // Check if death safety is enabled in config
+        if (!AioMod.CONFIG.deathSafetyEnabled) {
+            AioMod.LOGGER.info("Death Safety Manager disabled in config.");
+            return;
+        }
+        
         // Handle death - save inventory
         ServerLivingEntityEvents.ALLOW_DEATH.register((entity, damageSource, damageAmount) -> {
             if (!(entity instanceof ServerPlayer player)) return true;
+            if (!AioMod.CONFIG.deathSafetyEnabled) return true; // Double-check config
             
             // Save the player's inventory before death
             saveInventory(player);
@@ -60,17 +62,13 @@ public class DeathSafetyManager {
             // Record death location
             saveDeathLocation(player);
             
-            // If using keep inventory mode, cancel drops
-            if (KEEP_INVENTORY) {
-                // Clear inventory to prevent drops (we'll restore it)
-                // The actual clearing happens via game rule, but we save first
-            }
-            
             return true; // Allow death to proceed
         });
         
         // Handle respawn - restore inventory
         ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+            if (!AioMod.CONFIG.deathSafetyEnabled) return; // Check config
+            
             // Restore saved inventory
             restoreInventory(newPlayer);
             
@@ -101,7 +99,7 @@ public class DeathSafetyManager {
         
         // Save XP
         int totalXp = calculateTotalXp(player);
-        int keepXp = (int)(totalXp * XP_KEEP_PERCENT);
+        int keepXp = (int)(totalXp * AioMod.CONFIG.deathXpKeepPercent);
         
         savedInventories.put(playerId, new SavedInventory(mainInv, armor, offhand, keepXp));
         
@@ -132,8 +130,8 @@ public class DeathSafetyManager {
         
         // Notify player
         player.sendSystemMessage(Component.literal("§a✓ Your inventory has been restored!"));
-        if (XP_KEEP_PERCENT < 1.0f) {
-            player.sendSystemMessage(Component.literal("§7(" + (int)(XP_KEEP_PERCENT * 100) + "% of your XP was preserved)"));
+        if (AioMod.CONFIG.deathXpKeepPercent < 1.0f) {
+            player.sendSystemMessage(Component.literal("§7(" + (int)(AioMod.CONFIG.deathXpKeepPercent * 100) + "% of your XP was preserved)"));
         }
         
         // Play sound

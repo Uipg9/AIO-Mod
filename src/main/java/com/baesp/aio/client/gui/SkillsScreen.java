@@ -101,7 +101,7 @@ public class SkillsScreen extends BaseAioScreen {
             int level = data.getSkillLevel(hoveredSkill);
             double bonus = level * 5.0;
             tooltip.add("§7Current Bonus: §a+" + String.format("%.0f", bonus) + "%");
-            tooltip.add("§8Left-click to view details");
+            tooltip.add("§8Hover over skills to see info");
             drawTooltip(graphics, mouseX, mouseY, tooltip);
         }
     }
@@ -172,5 +172,34 @@ public class SkillsScreen extends BaseAioScreen {
         graphics.drawString(font, bonusText, levelX - font.width(bonusText) - 5, y + 5, COLOR_TEXT_GREEN, true);
     }
     
-    // Note: Mouse click handling is done via Button widgets
+    @Override
+    protected List<String> getHelpText() {
+        List<String> help = new ArrayList<>();
+        help.add("§a§l✦ SKILLS GUIDE ✦");
+        help.add("");
+        help.add("§e◆ WHAT ARE SKILLS?");
+        help.add("§7  Skills level up as you play!");
+        help.add("§7  Higher levels = better bonuses.");
+        help.add("");
+        help.add("§e◆ SKILL TYPES:");
+        help.add("§a  ⚘ Farming§7 - Harvest crops for XP");
+        help.add("§c  ⚔ Combat§7 - Kill mobs for XP");
+        help.add("§9  🛡 Defense§7 - Take damage for XP");
+        help.add("§6  ⚒ Smithing§7 - Smelt items for XP");
+        help.add("§2  🪓 Woodcutting§7 - Chop trees for XP");
+        help.add("§7  ⛏ Mining§7 - Break ores for XP");
+        help.add("");
+        help.add("§e◆ BONUSES:");
+        help.add("§7  Each level gives §a+5%§7 bonus:");
+        help.add("§7  • Farming: Extra crop drops");
+        help.add("§7  • Combat: More damage dealt");
+        help.add("§7  • Defense: Less damage taken");
+        help.add("§7  • Smithing: Bonus smelting output");
+        help.add("§7  • Woodcutting: Extra log drops");
+        help.add("§7  • Mining: Chance for bonus ores");
+        help.add("");
+        help.add("§e◆ KEYBIND:");
+        help.add("§7  • Press §eK§7 to toggle this menu");
+        return help;
+    }
 }

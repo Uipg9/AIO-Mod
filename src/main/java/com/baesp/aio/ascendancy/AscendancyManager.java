@@ -163,18 +163,93 @@ public class AscendancyManager {
         return true;
     }
     
+    // Attribute modifier UUIDs for consistent tracking
+    private static final java.util.UUID VITALITY_UUID = java.util.UUID.fromString("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+    private static final java.util.UUID SWIFTNESS_UUID = java.util.UUID.fromString("b2c3d4e5-f6a7-8901-bcde-f12345678901");
+    private static final java.util.UUID MIGHT_UUID = java.util.UUID.fromString("c3d4e5f6-a7b8-9012-cdef-123456789012");
+    
     public static void applyUpgradeEffects(ServerPlayer player) {
         AscendancyData data = PlayerDataManager.getData(player).ascendancy;
         
-        // Vitality - extra hearts
+        // Vitality - extra hearts (+2 HP per level = +1 heart per level)
         int vitalityLevel = data.getUpgradeLevel(UPGRADE_VITALITY);
-        // Max health handled by attribute modifier
+        applyHealthBonus(player, vitalityLevel);
         
-        // Swiftness - movement speed
+        // Swiftness - movement speed (+5% per level)
         int swiftnessLevel = data.getUpgradeLevel(UPGRADE_SWIFTNESS);
-        // Speed handled by attribute modifier
+        applySpeedBonus(player, swiftnessLevel);
+        
+        // Might - attack damage (+0.5 per level)
+        int mightLevel = data.getUpgradeLevel(UPGRADE_MIGHT);
+        applyDamageBonus(player, mightLevel);
         
         // Other upgrades are applied in their respective systems
+        PlayerDataManager.savePlayer(player);
+    }
+    
+    private static void applyHealthBonus(ServerPlayer player, int level) {
+        var healthAttr = player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+        if (healthAttr == null) return;
+        
+        // Remove old modifier if exists
+        var modifierId = net.minecraft.resources.Identifier.fromNamespaceAndPath("aio", "vitality_bonus");
+        healthAttr.removeModifier(modifierId);
+        
+        // Add new modifier (+2 HP per level = +1 heart per level)
+        if (level > 0) {
+            double bonus = level * 2.0; // Each level = +2 HP = +1 heart
+            var modifier = new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                modifierId,
+                bonus,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE
+            );
+            healthAttr.addPermanentModifier(modifier);
+            
+            // Heal player to new max if needed
+            if (player.getHealth() < player.getMaxHealth()) {
+                player.setHealth(Math.min(player.getHealth() + (float)bonus, player.getMaxHealth()));
+            }
+        }
+    }
+    
+    private static void applySpeedBonus(ServerPlayer player, int level) {
+        var speedAttr = player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+        if (speedAttr == null) return;
+        
+        // Remove old modifier
+        var modifierId = net.minecraft.resources.Identifier.fromNamespaceAndPath("aio", "swiftness_bonus");
+        speedAttr.removeModifier(modifierId);
+        
+        // Add new modifier (+5% speed per level)
+        if (level > 0) {
+            double bonus = level * 0.05; // 5% per level
+            var modifier = new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                modifierId,
+                bonus,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE
+            );
+            speedAttr.addPermanentModifier(modifier);
+        }
+    }
+    
+    private static void applyDamageBonus(ServerPlayer player, int level) {
+        var damageAttr = player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        if (damageAttr == null) return;
+        
+        // Remove old modifier
+        var modifierId = net.minecraft.resources.Identifier.fromNamespaceAndPath("aio", "might_bonus");
+        damageAttr.removeModifier(modifierId);
+        
+        // Add new modifier (+0.5 damage per level)
+        if (level > 0) {
+            double bonus = level * 0.5;
+            var modifier = new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                modifierId,
+                bonus,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE
+            );
+            damageAttr.addPermanentModifier(modifier);
+        }
     }
     
     public static boolean canAscend(ServerPlayer player) {
@@ -185,8 +260,9 @@ public class AscendancyManager {
     public static void performAscension(ServerPlayer player) {
         AscendancyData data = PlayerDataManager.getData(player).ascendancy;
         
-        // Grant prestige points
-        data.prestigePoints += AioMod.CONFIG.prestigePointsPerAscension;
+        // Grant MORE prestige points (3 instead of 1)
+        int pointsGained = 3;
+        data.prestigePoints += pointsGained;
         data.ascensionCount++;
         
         // Reset soul level and XP
@@ -200,16 +276,85 @@ public class AscendancyManager {
         // Clear ender chest
         player.getEnderChestInventory().clearContent();
         
-        // Give starter kit after clearing inventory
-        StarterKitManager.giveStarterKit(player);
+        // DON'T give starter kit here - the player joining event will handle it
+        // This was causing item duplication!
+        // StarterKitManager.giveStarterKit(player);
         
-        // Reset to spawn - get server via the player's level
+        // Find a DISTANT village for ascension spawn
         ServerLevel overworld = ((ServerLevel) player.level()).getServer().overworld();
-        // Use world origin as spawn position
-        BlockPos spawnPos = BlockPos.ZERO;
-        double spawnX = spawnPos.getX() + 0.5;
-        double spawnY = 64.0;
-        double spawnZ = spawnPos.getZ() + 0.5;
+        BlockPos villagePos = com.baesp.aio.villagespawn.VillageSpawnManager.findDistantVillage(overworld);
+        
+        double spawnX, spawnY, spawnZ;
+        if (villagePos != null) {
+            spawnX = villagePos.getX() + 0.5;
+            spawnZ = villagePos.getZ() + 0.5;
+            // Spawn HIGH in the sky (y=200) so they fall down with effects
+            spawnY = 200.0;
+        } else {
+            // Fallback: random distant location in sky
+            java.util.Random rand = new java.util.Random();
+            int distance = 5000 + rand.nextInt(3000);  // 5000-8000 blocks away
+            double angle = rand.nextDouble() * 2 * Math.PI;
+            spawnX = Math.cos(angle) * distance;
+            spawnZ = Math.sin(angle) * distance;
+            spawnY = 200.0;
+        }
+        
+        // Set time to day and clear weather for fresh start
+        overworld.setDayTime(0);
+        overworld.setWeatherParameters(6000, 0, false, false); // Clear weather for 5 minutes
+        
+        // Give protective effects for the fall
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+            net.minecraft.world.effect.MobEffects.SLOW_FALLING, 
+            600, // 30 seconds
+            0, 
+            false, 
+            true,
+            true
+        ));
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+            net.minecraft.world.effect.MobEffects.RESISTANCE, 
+            600, // 30 seconds
+            4,   // Level 5 = immunity
+            false, 
+            true,
+            true
+        ));
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+            net.minecraft.world.effect.MobEffects.BLINDNESS, 
+            300, // 15 seconds for dramatic effect
+            0, 
+            false, 
+            false,
+            false
+        ));
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+            net.minecraft.world.effect.MobEffects.GLOWING, 
+            200, // 10 seconds
+            0, 
+            false, 
+            true,
+            true
+        ));
+        // Saturation for food
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+            net.minecraft.world.effect.MobEffects.SATURATION, 
+            600, // 30 seconds
+            1,   // Level 2
+            false, 
+            false,
+            true
+        ));
+        // Regeneration for health
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+            net.minecraft.world.effect.MobEffects.REGENERATION, 
+            600, // 30 seconds
+            1,   // Level 2
+            false, 
+            true,
+            true
+        ));
         
         player.teleportTo(
             overworld,
@@ -222,43 +367,63 @@ public class AscendancyManager {
             false
         );
         
-        // Save ascension spawn point after 10 seconds (200 ticks)
-        final ServerLevel finalOverworld = overworld;
-        final double finalX = spawnX;
-        final double finalY = spawnY;
-        final double finalZ = spawnZ;
-        final var server = ((ServerLevel) player.level()).getServer();
-        final long executeAtTick = ((ServerLevel) player.level()).getGameTime() + 200; // 10 seconds
-        final ServerPlayer finalPlayer = player;
+        // Save ascension spawn point IMMEDIATELY (at ground level)
+        final double groundY = overworld.getHeightmapPos(
+            net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, 
+            new BlockPos((int)spawnX, 64, (int)spawnZ)
+        ).getY() + 1.0;
         
-        // Schedule delayed task using server tick events
-        final boolean[] executed = {false};
-        ServerTickEvents.END_SERVER_TICK.register(tickServer -> {
-            if (executed[0]) return; // Already executed
-            if (tickServer != server) return;
-            if (tickServer.overworld().getGameTime() >= executeAtTick) {
-                AscendancyData currentData = PlayerDataManager.getData(finalPlayer).ascendancy;
-                currentData.ascensionSpawnX = finalX;
-                currentData.ascensionSpawnY = finalY;
-                currentData.ascensionSpawnZ = finalZ;
-                currentData.ascensionSpawnDimension = finalOverworld.dimension().toString();
-                PlayerDataManager.savePlayer(finalPlayer);
-                finalPlayer.sendSystemMessage(
-                    Component.literal("§d✦ §7Ascension spawn point saved! You will respawn here on death.")
-                );
-                executed[0] = true;
-            }
-        });
+        data.ascensionSpawnX = spawnX;
+        data.ascensionSpawnY = groundY; // Ground level, not sky
+        data.ascensionSpawnZ = spawnZ;
+        data.ascensionSpawnDimension = overworld.dimension().toString();
+        PlayerDataManager.savePlayer(player);
+        
+        // CRITICAL: Update VillageSpawnManager with this player's new village spawn!
+        // This ensures they respawn at their new village after death
+        BlockPos newVillageSpawn = new BlockPos((int)spawnX, (int)groundY, (int)spawnZ);
+        com.baesp.aio.villagespawn.VillageSpawnManager.setPlayerVillageSpawn(player.getUUID(), newVillageSpawn);
+        
+        // Give starter kit items directly (not through StarterKitManager to avoid tracking issues)
+        giveAscensionKit(player);
         
         player.sendSystemMessage(
             Component.literal("§d✦ §5ASCENSION COMPLETE! §d✦")
         );
         player.sendSystemMessage(
-            Component.literal("§7You have gained §e" + AioMod.CONFIG.prestigePointsPerAscension + " Prestige Point(s)§7!")
+            Component.literal("§7You have gained §e" + pointsGained + " Prestige Point(s)§7!")
         );
         player.sendSystemMessage(
             Component.literal("§7Total Ascensions: §b" + data.ascensionCount)
         );
+        player.sendSystemMessage(
+            Component.literal("§7You are descending to a §enew distant land§7...")
+        );
+    }
+    
+    /**
+     * Give basic kit on ascension without triggering the starter kit tracking
+     */
+    private static void giveAscensionKit(ServerPlayer player) {
+        // Basic tools
+        player.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_SWORD));
+        player.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_PICKAXE));
+        player.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_AXE));
+        player.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_SHOVEL));
+        
+        // Armor
+        player.getInventory().setItem(36, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LEATHER_BOOTS));
+        player.getInventory().setItem(37, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LEATHER_LEGGINGS));
+        player.getInventory().setItem(38, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LEATHER_CHESTPLATE));
+        player.getInventory().setItem(39, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LEATHER_HELMET));
+        
+        // Food
+        player.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 16));
+        player.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COOKED_BEEF, 8));
+        
+        // Utility
+        player.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.TORCH, 32));
+        player.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CRAFTING_TABLE));
     }
     
     private static void teleportToAscensionSpawn(ServerPlayer player) {
@@ -284,11 +449,26 @@ public class AscendancyManager {
             return;
         }
         
-        // Teleport to saved ascension spawn
+        // Force load the chunk and find a SAFE Y coordinate at the spawn location
+        int spawnX = (int) data.ascensionSpawnX;
+        int spawnZ = (int) data.ascensionSpawnZ;
+        targetLevel.getChunk(spawnX >> 4, spawnZ >> 4);
+        
+        // Find safe Y by scanning down from top to find actual surface
+        double safeY = findSafeY(targetLevel, spawnX, spawnZ);
+        
+        // Update the saved spawn Y to prevent future cave spawns
+        if (Math.abs(safeY - data.ascensionSpawnY) > 5) {
+            data.ascensionSpawnY = safeY;
+            PlayerDataManager.savePlayer(player);
+            AioMod.LOGGER.info("Updated ascension spawn Y from cave to surface: " + safeY);
+        }
+        
+        // Teleport to safe surface position
         player.teleportTo(
             targetLevel,
             data.ascensionSpawnX,
-            data.ascensionSpawnY,
+            safeY,
             data.ascensionSpawnZ,
             java.util.Set.of(),
             player.getYRot(),
@@ -299,6 +479,51 @@ public class AscendancyManager {
         player.sendSystemMessage(
             Component.literal("§d✦ §7Respawned at ascension location")
         );
+    }
+    
+    /**
+     * Finds a safe Y coordinate by scanning DOWN from max height to find the actual surface.
+     * This prevents spawning in caves.
+     */
+    private static double findSafeY(ServerLevel world, int x, int z) {
+        // Force chunk to be fully loaded/generated
+        world.getChunk(x >> 4, z >> 4);
+        
+        // Scan DOWN from top to find the first solid block (the actual surface)
+        for (int y = 319; y > 50; y--) {
+            net.minecraft.core.BlockPos checkPos = new net.minecraft.core.BlockPos(x, y, z);
+            net.minecraft.core.BlockPos abovePos = new net.minecraft.core.BlockPos(x, y + 1, z);
+            net.minecraft.core.BlockPos above2Pos = new net.minecraft.core.BlockPos(x, y + 2, z);
+            
+            var blockState = world.getBlockState(checkPos);
+            var aboveState = world.getBlockState(abovePos);
+            var above2State = world.getBlockState(above2Pos);
+            
+            // Skip air/water - we're looking for ground
+            if (blockState.isAir() || !blockState.getFluidState().isEmpty()) {
+                continue;
+            }
+            
+            // Skip leaves and other non-solid blocks
+            if (!blockState.isSolid()) {
+                continue;
+            }
+            
+            // Check if we found solid ground with 2 air blocks above (standing space)
+            boolean abovePassable = aboveState.isAir() || (!aboveState.isSolid() && aboveState.getFluidState().isEmpty());
+            boolean above2Passable = above2State.isAir() || (!above2State.isSolid() && above2State.getFluidState().isEmpty());
+            
+            if (abovePassable && above2Passable) {
+                return y + 1.0; // Stand on top of the solid block
+            }
+        }
+        
+        // Fallback to heightmap
+        net.minecraft.core.BlockPos heightmapPos = world.getHeightmapPos(
+            net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+            new net.minecraft.core.BlockPos(x, 64, z)
+        );
+        return heightmapPos.getY() + 1.0;
     }
     
     public static double getFortuneBonus(ServerPlayer player) {
@@ -363,11 +588,10 @@ public class AscendancyManager {
     }
     
     public static void ascend(ServerPlayer player) {
-        int minLevel = 10; // Minimum level to ascend
-        if (PlayerDataManager.getData(player).ascendancy.soulLevel >= minLevel) {
+        if (PlayerDataManager.getData(player).ascendancy.soulLevel >= REQUIRED_SOUL_LEVEL_FOR_ASCENSION) {
             performAscension(player);
         } else {
-            player.sendSystemMessage(Component.literal("§cYou need Soul Level " + minLevel + " to ascend!"));
+            player.sendSystemMessage(Component.literal("§cYou need Soul Level " + REQUIRED_SOUL_LEVEL_FOR_ASCENSION + " to ascend!"));
         }
     }
 }

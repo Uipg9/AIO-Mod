@@ -2,6 +2,7 @@ package com.baesp.aio.client;
 
 import com.baesp.aio.AioMod;
 import com.baesp.aio.client.gui.AscendancyScreen;
+import com.baesp.aio.client.gui.FeatureToggleScreen;
 import com.baesp.aio.client.gui.ShopScreen;
 import com.baesp.aio.client.gui.SkillsScreen;
 import com.baesp.aio.client.hud.HudRenderer;
@@ -18,6 +19,9 @@ import net.minecraft.world.effect.MobEffects;
 import org.lwjgl.glfw.GLFW;
 
 public class AioKeybindings {
+    // MAIN: Feature Toggle Menu
+    public static KeyMapping OPEN_FEATURE_MENU;  // [ - Open Feature Toggle Menu
+    
     // ROW 1: Utility Keybinds (G, H, J, K) - Near Squat Grow (C)
     public static KeyMapping TOGGLE_SQUAT_GROW;  // G - Squat Grow Toggle
     public static KeyMapping TOGGLE_HUD;         // H - Toggle HUD Sidebar
@@ -41,6 +45,14 @@ public class AioKeybindings {
     );
     
     public static void register() {
+        // MAIN: Feature Toggle Menu - '[' key
+        OPEN_FEATURE_MENU = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+            "key.aio.feature_menu",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_LEFT_BRACKET,  // '[' key
+            AIO_CATEGORY
+        ));
+        
         // ROW 1: Utility Keybinds (G, H, J, K)
         TOGGLE_SQUAT_GROW = KeyBindingHelper.registerKeyBinding(new KeyMapping(
             "key.aio.squatgrow",
@@ -109,10 +121,24 @@ public class AioKeybindings {
     private static void handleKeyInputs(Minecraft client) {
         if (client.player == null) return;
         
-        // G - Open Shop
+        // '[' - Open Feature Toggle Menu (close if already open)
+        while (OPEN_FEATURE_MENU.consumeClick()) {
+            if (client.screen instanceof FeatureToggleScreen) {
+                client.setScreen(null);  // Close if already open
+            } else {
+                AioNetworkClient.sendRequestData();
+                client.setScreen(new FeatureToggleScreen());
+            }
+        }
+        
+        // J - Toggle Shop (close if already open)
         while (OPEN_SHOP.consumeClick()) {
-            AioNetworkClient.sendRequestData();
-            client.setScreen(new ShopScreen());
+            if (client.screen instanceof ShopScreen) {
+                client.setScreen(null);  // Close if already open
+            } else {
+                AioNetworkClient.sendRequestData();
+                client.setScreen(new ShopScreen());
+            }
         }
         
         // H - Toggle HUD Sidebar
@@ -124,10 +150,14 @@ public class AioKeybindings {
             );
         }
         
-        // K - Open Skills
+        // K - Toggle Skills (close if already open)
         while (OPEN_SKILLS.consumeClick()) {
-            AioNetworkClient.sendRequestData();
-            client.setScreen(new SkillsScreen());
+            if (client.screen instanceof SkillsScreen) {
+                client.setScreen(null);  // Close if already open
+            } else {
+                AioNetworkClient.sendRequestData();
+                client.setScreen(new SkillsScreen());
+            }
         }
         
         // G - Toggle Squat Grow
@@ -178,10 +208,14 @@ public class AioKeybindings {
             );
         }
         
-        // M - Open Ascendancy
+        // M - Toggle Ascendancy (close if already open)
         while (OPEN_ASCENDANCY.consumeClick()) {
-            AioNetworkClient.sendRequestData();
-            client.setScreen(new AscendancyScreen());
+            if (client.screen instanceof AscendancyScreen) {
+                client.setScreen(null);  // Close if already open
+            } else {
+                AioNetworkClient.sendRequestData();
+                client.setScreen(new AscendancyScreen());
+            }
         }
         
         // M - Toggle Squat Grow
