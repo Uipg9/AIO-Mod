@@ -43,12 +43,13 @@ public class StarterKitManager {
     }
     
     private static boolean hasReceivedKit(ServerPlayer player) {
-        // Use player data to track if they've received the kit
-        return PlayerDataManager.getBoolean(player, "received_starter_kit");
+        // Use persistent player data to track if they've received the kit
+        return PlayerDataManager.getData(player).receivedStarterKit;
     }
     
     private static void setReceivedKit(ServerPlayer player) {
-        PlayerDataManager.setBoolean(player, "received_starter_kit", true);
+        PlayerDataManager.getData(player).receivedStarterKit = true;
+        PlayerDataManager.savePlayer(player);  // Save immediately to persist
     }
     
     public static void giveStarterKit(ServerPlayer player) {
@@ -77,6 +78,10 @@ public class StarterKitManager {
         // Stone shovel
         ItemStack shovel = new ItemStack(Items.STONE_SHOVEL);
         giveItem(player, shovel);
+        
+        // Stone hoe
+        ItemStack hoe = new ItemStack(Items.STONE_HOE);
+        giveItem(player, hoe);
         
         // === ARMOR ===
         // Leather armor set - auto-equip to armor slots (36-39)

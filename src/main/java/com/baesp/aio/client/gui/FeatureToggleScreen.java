@@ -174,8 +174,8 @@ public class FeatureToggleScreen extends Screen {
     
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-        // Render background
-        this.renderBackground(graphics, mouseX, mouseY, delta);
+        // Call super.render first - this handles background blur in 1.21.11
+        super.render(graphics, mouseX, mouseY, delta);
         
         // Draw title
         graphics.drawCenteredString(
@@ -204,7 +204,7 @@ public class FeatureToggleScreen extends Screen {
             0x888888
         );
         
-        super.render(graphics, mouseX, mouseY, delta);
+        // Note: super.render() called at beginning of method, not here
     }
     
     @Override

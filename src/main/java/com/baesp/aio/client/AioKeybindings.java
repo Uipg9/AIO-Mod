@@ -160,52 +160,20 @@ public class AioKeybindings {
             }
         }
         
-        // G - Toggle Squat Grow
+        // G - Toggle Squat Grow (removed - use [ menu instead)
+        // Keybind still exists for players who prefer it, but not recommended
         while (TOGGLE_SQUAT_GROW.consumeClick()) {
-            AioNetworkClient.sendToggleSquatGrow();
+            // Deprecated - use [ menu. Silent ignore.
         }
         
-        // B - Toggle Full Brightness (Night Vision Effect)
+        // B - Toggle Full Brightness (removed - use [ menu instead)
         while (TOGGLE_BRIGHTNESS.consumeClick()) {
-            fullBrightnessEnabled = !fullBrightnessEnabled;
-            if (fullBrightnessEnabled) {
-                // Apply infinite night vision (client-side visual only)
-                client.player.addEffect(new MobEffectInstance(
-                    MobEffects.NIGHT_VISION, 
-                    Integer.MAX_VALUE, 
-                    0, 
-                    false, 
-                    false, 
-                    false
-                ));
-                client.player.displayClientMessage(
-                    Component.literal("§6[AIO] §aFull Brightness: §fEnabled"), true
-                );
-            } else {
-                client.player.removeEffect(MobEffects.NIGHT_VISION);
-                client.player.displayClientMessage(
-                    Component.literal("§6[AIO] §cFull Brightness: §fDisabled"), true
-                );
-            }
-            HudRenderer.addCustomMessage(
-                fullBrightnessEnabled ? "☀ Brightness ON" : "☀ Brightness OFF",
-                fullBrightnessEnabled ? 0xFFFFFF55 : 0xFF888888
-            );
+            // Deprecated - use [ menu. Silent ignore.
         }
         
-        // N - Toggle Void Magnet
+        // N - Toggle Void Magnet (removed - use [ menu instead)
         while (TOGGLE_VOID_MAGNET.consumeClick()) {
-            voidMagnetEnabled = !voidMagnetEnabled;
-            // Notify server about void magnet state
-            AioNetworkClient.sendToggleVoidMagnet(voidMagnetEnabled);
-            String status = voidMagnetEnabled ? "§aEnabled" : "§cDisabled";
-            client.player.displayClientMessage(
-                Component.literal("§6[AIO] §5Void Magnet: " + status), true
-            );
-            HudRenderer.addCustomMessage(
-                voidMagnetEnabled ? "⚡ Void Magnet ON" : "⚡ Void Magnet OFF",
-                voidMagnetEnabled ? 0xFF9955FF : 0xFF888888
-            );
+            // Deprecated - use [ menu. Silent ignore.
         }
         
         // M - Toggle Ascendancy (close if already open)
@@ -216,11 +184,6 @@ public class AioKeybindings {
                 AioNetworkClient.sendRequestData();
                 client.setScreen(new AscendancyScreen());
             }
-        }
-        
-        // M - Toggle Squat Grow
-        while (TOGGLE_SQUAT_GROW.consumeClick()) {
-            AioNetworkClient.sendToggleSquatGrow();
         }
         
         // Quests (placeholder for now)

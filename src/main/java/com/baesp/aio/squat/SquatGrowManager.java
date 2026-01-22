@@ -78,6 +78,10 @@ public class SquatGrowManager {
                     
                     // Check if it's a standard growable block (crops, etc.)
                     if (block instanceof BonemealableBlock growable) {
+                        // Skip grass blocks - they spawn tall grass which is annoying
+                        if (block == Blocks.GRASS_BLOCK || block == Blocks.SHORT_GRASS || block == Blocks.TALL_GRASS) {
+                            continue;
+                        }
                         try {
                             if (growable.isValidBonemealTarget(serverLevel, pos, state)) {
                                 // Apply growth chance

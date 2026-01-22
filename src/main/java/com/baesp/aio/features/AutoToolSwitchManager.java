@@ -57,10 +57,9 @@ public class AutoToolSwitchManager {
                     return;
                 }
                 
-                // Skip farmland and tillable blocks - don't swap to shovel when farming
+                // Skip farmland and crops - but NOT dirt/grass (shovel should work on those)
                 String blockName = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(targetState.getBlock()).getPath();
-                if (blockName.contains("farmland") || blockName.contains("dirt") || 
-                    blockName.contains("grass") || blockName.contains("coarse") ||
+                if (blockName.contains("farmland") ||
                     targetState.getBlock() instanceof net.minecraft.world.level.block.CropBlock ||
                     targetState.getBlock() instanceof net.minecraft.world.level.block.StemBlock) {
                     return; // Don't auto-switch for farming-related blocks
@@ -80,18 +79,7 @@ public class AutoToolSwitchManager {
                 ItemStack currentTool = player.getMainHandItem();
                 
                 int bestSlot = findBestToolSlot(player, targetState);
-                
-                // Get current slot through the container slot system
-                int currentSlot = inventory.findSlotMatchingItem(currentTool);
-                if (currentSlot < 0 || currentSlot > 8) {
-                    // Find current selected slot by checking which hotbar slot matches main hand
-                    for (int i = 0; i < 9; i++) {
-                        if (ItemStack.matches(inventory.getItem(i), currentTool)) {
-                            currentSlot = i;
-                            break;
-                        }
-                    }
-                }
+                int currentSlot = inventory.getSelectedSlot();
                 
                 // If a better tool exists in a different slot, swap to it
                 if (bestSlot >= 0 && bestSlot != currentSlot) {
@@ -101,9 +89,9 @@ public class AutoToolSwitchManager {
                     float bestSpeed = bestTool.getDestroySpeed(targetState);
                     
                     if (bestSpeed > currentSpeed) {
-                        // Swap hotbar slot directly through packet simulation
-                        // This is the client-side way to change selected slot
-                        inventory.pickSlot(bestSlot);
+                        // Change the selected hotbar slot - this is the correct way!
+                        // This moves the player's selection, not the items
+                        inventory.setSelectedSlot(bestSlot);
                         player.displayClientMessage(
                             net.minecraft.network.chat.Component.literal("§a⚒ Auto-switched to better tool!"),
                             true // Show as action bar

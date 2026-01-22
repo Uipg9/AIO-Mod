@@ -118,6 +118,9 @@ public class PlayerDataManager {
         // Squat Grow toggle
         public boolean squatGrowEnabled = false;
         
+        // Starter Kit received flag
+        public boolean receivedStarterKit = false;
+        
         public void load(CompoundTag tag) {
             if (tag.contains("Ascendancy")) {
                 ascendancy.load(tag.getCompoundOrEmpty("Ascendancy"));
@@ -129,6 +132,7 @@ public class PlayerDataManager {
                 economy.load(tag.getCompoundOrEmpty("Economy"));
             }
             squatGrowEnabled = tag.getBooleanOr("SquatGrowEnabled", false);
+            receivedStarterKit = tag.getBooleanOr("ReceivedStarterKit", false);
         }
         
         public void save(CompoundTag tag) {
@@ -145,6 +149,7 @@ public class PlayerDataManager {
             tag.put("Economy", economyTag);
             
             tag.putBoolean("SquatGrowEnabled", squatGrowEnabled);
+            tag.putBoolean("ReceivedStarterKit", receivedStarterKit);
         }
     }
 }
