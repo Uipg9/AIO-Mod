@@ -11,6 +11,7 @@ import com.baesp.aio.rpg.SkillsData;
 import com.baesp.aio.rpg.economy.EconomyManager;
 import com.baesp.aio.squat.SquatGrowManager;
 import com.baesp.aio.warp.WarpManager;
+import com.baesp.aio.warp.HomeManager;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
@@ -46,6 +47,7 @@ public class AioCommands {
             registerSkillsCommands(dispatcher);
             registerAscendancyCommands(dispatcher);
             registerWarpCommands(dispatcher);
+            registerHomeCommands(dispatcher);
         });
     }
     
@@ -504,6 +506,30 @@ public class AioCommands {
             .executes(context -> {
                 if (context.getSource().getEntity() instanceof ServerPlayer player) {
                     WarpManager.returnToPreviousLocation(player);
+                }
+                return 1;
+            })
+        );
+    }
+    
+    // ============= HOME COMMANDS =============
+    
+    private static void registerHomeCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
+        // /home - Teleport to home dimension
+        dispatcher.register(Commands.literal("home")
+            .executes(context -> {
+                if (context.getSource().getEntity() instanceof ServerPlayer player) {
+                    HomeManager.teleportToHome(player);
+                }
+                return 1;
+            })
+        );
+        
+        // /sethome - Set spawn point within home dimension
+        dispatcher.register(Commands.literal("sethome")
+            .executes(context -> {
+                if (context.getSource().getEntity() instanceof ServerPlayer player) {
+                    HomeManager.setHomeSpawn(player);
                 }
                 return 1;
             })

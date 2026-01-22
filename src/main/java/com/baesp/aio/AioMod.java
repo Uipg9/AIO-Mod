@@ -13,6 +13,7 @@ import com.baesp.aio.sleepwarp.SleepWarpManager;
 import com.baesp.aio.squat.SquatGrowManager;
 import com.baesp.aio.villagespawn.VillageSpawnManager;
 import com.baesp.aio.warp.WarpManager;
+import com.baesp.aio.warp.HomeManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -65,6 +66,7 @@ public class AioMod implements ModInitializer {
         DespawningEggsManager.register();
         FastLeafDecayManager.register();
         WarpManager.init();
+        HomeManager.init();
         
         // Register commands
         AioCommands.register();

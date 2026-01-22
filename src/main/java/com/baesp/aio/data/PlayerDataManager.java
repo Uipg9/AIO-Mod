@@ -121,6 +121,13 @@ public class PlayerDataManager {
         // Starter Kit received flag
         public boolean receivedStarterKit = false;
         
+        // Home dimension position
+        public double homeX = Double.NaN;
+        public double homeY = Double.NaN;
+        public double homeZ = Double.NaN;
+        public float homeYaw = 0;
+        public float homePitch = 0;
+        
         public void load(CompoundTag tag) {
             if (tag.contains("Ascendancy")) {
                 ascendancy.load(tag.getCompoundOrEmpty("Ascendancy"));
@@ -133,6 +140,15 @@ public class PlayerDataManager {
             }
             squatGrowEnabled = tag.getBooleanOr("SquatGrowEnabled", false);
             receivedStarterKit = tag.getBooleanOr("ReceivedStarterKit", false);
+            
+            // Load home position
+            if (tag.contains("HomeX")) {
+                homeX = tag.getDoubleOr("HomeX", Double.NaN);
+                homeY = tag.getDoubleOr("HomeY", Double.NaN);
+                homeZ = tag.getDoubleOr("HomeZ", Double.NaN);
+                homeYaw = tag.getFloatOr("HomeYaw", 0);
+                homePitch = tag.getFloatOr("HomePitch", 0);
+            }
         }
         
         public void save(CompoundTag tag) {
@@ -150,6 +166,15 @@ public class PlayerDataManager {
             
             tag.putBoolean("SquatGrowEnabled", squatGrowEnabled);
             tag.putBoolean("ReceivedStarterKit", receivedStarterKit);
+            
+            // Save home position
+            if (!Double.isNaN(homeX)) {
+                tag.putDouble("HomeX", homeX);
+                tag.putDouble("HomeY", homeY);
+                tag.putDouble("HomeZ", homeZ);
+                tag.putFloat("HomeYaw", homeYaw);
+                tag.putFloat("HomePitch", homePitch);
+            }
         }
     }
 }

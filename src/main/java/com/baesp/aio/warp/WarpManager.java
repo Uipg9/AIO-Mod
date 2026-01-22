@@ -13,8 +13,13 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.IOException;
@@ -34,7 +39,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * 
  * Features:
  * - Personal warp points that players can set and name
- * - Warp Hub dimension with portals for each warp
+ * - Warp Hub dimension with portal pads on the ground
+ * - Walk into portal to teleport - no climbing needed
+ * - Floating name tags above each portal
  * - Auto-saves previous location when entering hub
  * - "Previous Location" portal to return where you came from
  */
@@ -52,10 +59,72 @@ public class WarpManager {
     // Previous locations (before entering warp hub)
     private static final Map<UUID, PreviousLocation> PREVIOUS_LOCATIONS = new ConcurrentHashMap<>();
     
+    // Portal positions for collision detection: stores which portal is at each position
+    // Map of player UUID -> Map of BlockPos -> portal index (-1 = previous location)
+    private static final Map<UUID, Map<BlockPos, Integer>> PORTAL_POSITIONS = new ConcurrentHashMap<>();
+    
+    // Cooldown to prevent teleport spam
+    private static final Map<UUID, Long> TELEPORT_COOLDOWN = new ConcurrentHashMap<>();
+    private static final long COOLDOWN_MS = 1000; // 1 second cooldown
+    
     private static Path DATA_DIR;
+    private static final int PLATFORM_Y = 64;
+    private static final double PORTAL_RADIUS = 6.0;
     
     public static void init() {
+        // Register tick event for portal collision detection
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                if (isInWarpHub(player)) {
+                    checkPortalCollision(player);
+                }
+            }
+        });
+        
         AioMod.LOGGER.info("Warp Manager initialized.");
+    }
+    
+    /**
+     * Check if player is standing on a portal and teleport them
+     */
+    private static void checkPortalCollision(ServerPlayer player) {
+        UUID uuid = player.getUUID();
+        Map<BlockPos, Integer> portals = PORTAL_POSITIONS.get(uuid);
+        if (portals == null || portals.isEmpty()) return;
+        
+        // Check cooldown
+        Long lastTeleport = TELEPORT_COOLDOWN.get(uuid);
+        if (lastTeleport != null && System.currentTimeMillis() - lastTeleport < COOLDOWN_MS) {
+            return;
+        }
+        
+        // Get player's feet position
+        BlockPos playerPos = player.blockPosition();
+        
+        // Check if player is on any portal pad (check the block they're standing on)
+        for (Map.Entry<BlockPos, Integer> entry : portals.entrySet()) {
+            BlockPos portalPos = entry.getKey();
+            // Check if player is within the 3x3 portal area at floor level
+            if (Math.abs(playerPos.getX() - portalPos.getX()) <= 1 &&
+                Math.abs(playerPos.getZ() - portalPos.getZ()) <= 1 &&
+                playerPos.getY() == PLATFORM_Y + 1) {
+                
+                int portalIndex = entry.getValue();
+                TELEPORT_COOLDOWN.put(uuid, System.currentTimeMillis());
+                
+                if (portalIndex == -1) {
+                    // Previous location portal
+                    returnToPreviousLocation(player);
+                } else {
+                    // Warp portal
+                    List<WarpPoint> warps = getWarps(player);
+                    if (portalIndex >= 0 && portalIndex < warps.size()) {
+                        teleportToWarpPoint(player, warps.get(portalIndex));
+                    }
+                }
+                return;
+            }
+        }
     }
     
     public static void onServerStart(MinecraftServer server) {
@@ -96,7 +165,7 @@ public class WarpManager {
             }
         }
         
-        // Create the warp - store dimension as the ResourceKey string form
+        // Create the warp
         WarpPoint warp = new WarpPoint(
             name,
             player.level().dimension().toString(),
@@ -230,21 +299,15 @@ public class WarpManager {
         // Save current location before teleporting
         savePreviousLocation(player);
         
-        // Calculate spawn position in warp hub
-        // Center platform at y=64
-        double x = 0.5;
-        double y = 65.0;
-        double z = 0.5;
-        
-        // Build the central platform if it doesn't exist
+        // Build the platform and portals
         buildWarpHubPlatform(warpHub, player);
         
-        // Teleport
+        // Teleport to center
         player.teleportTo(
             warpHub,
-            x,
-            y,
-            z,
+            0.5,
+            PLATFORM_Y + 1.0,
+            0.5,
             Set.of(),
             0.0f,
             0.0f,
@@ -252,8 +315,8 @@ public class WarpManager {
         );
         
         player.sendSystemMessage(Component.literal("§d✦ Welcome to the Warp Hub!"));
-        player.sendSystemMessage(Component.literal("§7Walk through a portal to teleport to that warp."));
-        player.sendSystemMessage(Component.literal("§7The §e'Previous Location'§7 portal returns you where you came from."));
+        player.sendSystemMessage(Component.literal("§7Step onto a portal pad to teleport."));
+        player.sendSystemMessage(Component.literal("§7The §e⟲ Previous Location§7 pad returns you where you came from."));
         
         return true;
     }
@@ -263,25 +326,35 @@ public class WarpManager {
      */
     public static void buildWarpHubPlatform(ServerLevel warpHub, ServerPlayer player) {
         List<WarpPoint> warps = getWarps(player);
-        int platformY = 64;
+        UUID uuid = player.getUUID();
+        
+        // Clear portal positions for this player
+        PORTAL_POSITIONS.put(uuid, new HashMap<>());
+        Map<BlockPos, Integer> portalMap = PORTAL_POSITIONS.get(uuid);
+        
+        // Remove old armor stands in the area
+        AABB clearArea = new AABB(-15, PLATFORM_Y, -15, 15, PLATFORM_Y + 10, 15);
+        List<ArmorStand> oldStands = warpHub.getEntitiesOfClass(ArmorStand.class, clearArea);
+        for (ArmorStand stand : oldStands) {
+            stand.discard();
+        }
         
         // Clear old structures and build central platform
-        // Platform is 21x21 blocks centered at 0,0
         int platformRadius = 10;
         
         for (int xPos = -platformRadius; xPos <= platformRadius; xPos++) {
             for (int zPos = -platformRadius; zPos <= platformRadius; zPos++) {
-                BlockPos pos = new BlockPos(xPos, platformY, zPos);
+                BlockPos pos = new BlockPos(xPos, PLATFORM_Y, zPos);
                 
                 // Clear above
                 for (int yOffset = 1; yOffset <= 10; yOffset++) {
                     warpHub.setBlock(pos.above(yOffset), Blocks.AIR.defaultBlockState(), 2);
                 }
                 
-                // Build floor
+                // Build floor - checkered pattern
                 if (Math.abs(xPos) <= 2 && Math.abs(zPos) <= 2) {
-                    // Center is gold blocks
-                    warpHub.setBlock(pos, Blocks.GOLD_BLOCK.defaultBlockState(), 2);
+                    // Center spawn area - crying obsidian for visual
+                    warpHub.setBlock(pos, Blocks.CRYING_OBSIDIAN.defaultBlockState(), 2);
                 } else if ((Math.abs(xPos) + Math.abs(zPos)) % 2 == 0) {
                     warpHub.setBlock(pos, Blocks.DEEPSLATE_TILES.defaultBlockState(), 2);
                 } else {
@@ -290,48 +363,74 @@ public class WarpManager {
             }
         }
         
-        // Build portal pillars for each warp
+        // Build portal pads in a circle
         int totalWarps = warps.size() + 1; // +1 for "Previous Location"
-        double radius = 6.0;
         
-        // "Previous Location" portal first
+        // "Previous Location" portal first (at angle 0 = east)
         double angle = 0;
-        int px = (int) Math.round(radius * Math.cos(angle));
-        int pz = (int) Math.round(radius * Math.sin(angle));
-        buildPortalPillar(warpHub, new BlockPos(px, platformY + 1, pz), "Previous Location", 0xFFFF55);
+        int px = (int) Math.round(PORTAL_RADIUS * Math.cos(angle));
+        int pz = (int) Math.round(PORTAL_RADIUS * Math.sin(angle));
+        buildPortalPad(warpHub, new BlockPos(px, PLATFORM_Y, pz), "§e⟲ Previous Location", true);
+        portalMap.put(new BlockPos(px, PLATFORM_Y, pz), -1);
         
         // Player warps
         for (int i = 0; i < warps.size(); i++) {
             WarpPoint warp = warps.get(i);
             angle = (2 * Math.PI * (i + 1)) / Math.max(totalWarps, 8);
-            px = (int) Math.round(radius * Math.cos(angle));
-            pz = (int) Math.round(radius * Math.sin(angle));
-            buildPortalPillar(warpHub, new BlockPos(px, platformY + 1, pz), warp.name, 0x55FFFF);
+            px = (int) Math.round(PORTAL_RADIUS * Math.cos(angle));
+            pz = (int) Math.round(PORTAL_RADIUS * Math.sin(angle));
+            buildPortalPad(warpHub, new BlockPos(px, PLATFORM_Y, pz), "§b" + warp.name, false);
+            portalMap.put(new BlockPos(px, PLATFORM_Y, pz), i);
         }
         
-        // Glowstone lighting
-        warpHub.setBlock(new BlockPos(0, platformY + 5, 0), Blocks.GLOWSTONE.defaultBlockState(), 2);
+        // Center glowstone for lighting (floating above)
+        warpHub.setBlock(new BlockPos(0, PLATFORM_Y + 6, 0), Blocks.GLOWSTONE.defaultBlockState(), 2);
+        warpHub.setBlock(new BlockPos(3, PLATFORM_Y + 4, 3), Blocks.SEA_LANTERN.defaultBlockState(), 2);
+        warpHub.setBlock(new BlockPos(-3, PLATFORM_Y + 4, 3), Blocks.SEA_LANTERN.defaultBlockState(), 2);
+        warpHub.setBlock(new BlockPos(3, PLATFORM_Y + 4, -3), Blocks.SEA_LANTERN.defaultBlockState(), 2);
+        warpHub.setBlock(new BlockPos(-3, PLATFORM_Y + 4, -3), Blocks.SEA_LANTERN.defaultBlockState(), 2);
     }
     
     /**
-     * Build a portal pillar at a position
+     * Build a portal pad at floor level with floating name
      */
-    private static void buildPortalPillar(ServerLevel world, BlockPos base, String name, int color) {
-        // Pillar base
-        world.setBlock(base, Blocks.OBSIDIAN.defaultBlockState(), 2);
-        world.setBlock(base.above(), Blocks.OBSIDIAN.defaultBlockState(), 2);
+    private static void buildPortalPad(ServerLevel world, BlockPos center, String name, boolean isPreviousLocation) {
+        // Build 3x3 portal pad on the floor
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                BlockPos pos = center.offset(dx, 0, dz);
+                if (dx == 0 && dz == 0) {
+                    // Center block - end portal frame for the glowing effect
+                    world.setBlock(pos, Blocks.END_PORTAL_FRAME.defaultBlockState(), 2);
+                } else {
+                    // Surrounding blocks - purple for previous, cyan for warps
+                    if (isPreviousLocation) {
+                        world.setBlock(pos, Blocks.GOLD_BLOCK.defaultBlockState(), 2);
+                    } else {
+                        world.setBlock(pos, Blocks.DIAMOND_BLOCK.defaultBlockState(), 2);
+                    }
+                }
+            }
+        }
         
-        // Portal block (end gateway for effect)
-        world.setBlock(base.above(2), Blocks.END_GATEWAY.defaultBlockState(), 2);
-        
-        // Top decoration
-        world.setBlock(base.above(3), Blocks.SEA_LANTERN.defaultBlockState(), 2);
+        // Spawn armor stand with name floating above
+        ArmorStand nameTag = new ArmorStand(EntityType.ARMOR_STAND, world);
+        nameTag.setPos(center.getX() + 0.5, center.getY() + 2.0, center.getZ() + 0.5);
+        nameTag.setCustomName(Component.literal(name));
+        nameTag.setCustomNameVisible(true);
+        nameTag.setInvisible(true);
+        nameTag.setNoGravity(true);
+        nameTag.setInvulnerable(true);
+        world.addFreshEntity(nameTag);
     }
     
     /**
      * Save player's location before entering warp hub
      */
     private static void savePreviousLocation(ServerPlayer player) {
+        // Don't save if already in warp hub
+        if (isInWarpHub(player)) return;
+        
         PreviousLocation prev = new PreviousLocation(
             player.level().dimension().toString(),
             player.getX(),

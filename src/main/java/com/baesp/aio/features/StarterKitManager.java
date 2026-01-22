@@ -114,15 +114,14 @@ public class StarterKitManager {
         player.sendSystemMessage(Component.literal("§7You've received a §aStarter Kit§7!"));
         player.sendSystemMessage(Component.literal(""));
         player.sendSystemMessage(Component.literal("§7Key Features:"));
+        player.sendSystemMessage(Component.literal("§8• §fPress §e[ §fto open the §dFeature Menu"));
         player.sendSystemMessage(Component.literal("§8• §fPress §eJ §fto open the §aShop"));
         player.sendSystemMessage(Component.literal("§8• §fPress §eK §fto view your §bSkills"));
         player.sendSystemMessage(Component.literal("§8• §fPress §eM §ffor §dAscendancy Tree"));
-        player.sendSystemMessage(Component.literal("§8• §fPress §eG §ffor §aSquat Grow"));
-        player.sendSystemMessage(Component.literal("§8• §fPress §eN §ffor §dVoid Magnet"));
         player.sendSystemMessage(Component.literal("§8• §fHold §eSHIFT §f+ break for Vein Mining"));
-        player.sendSystemMessage(Component.literal("§8• §fPress §eB §ffor Full Brightness"));
         player.sendSystemMessage(Component.literal("§8• §fPress §eH §fto toggle HUD sidebar"));
         player.sendSystemMessage(Component.literal(""));
+        player.sendSystemMessage(Component.literal("§7Use §e/setwarp <name>§7, §e/warp§7, §e/home§7"));
         player.sendSystemMessage(Component.literal("§7Good luck and have fun!"));
         player.sendSystemMessage(Component.literal("§6═══════════════════════════════════"));
         player.sendSystemMessage(Component.literal(""));

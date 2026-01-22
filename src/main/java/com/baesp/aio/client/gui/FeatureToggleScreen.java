@@ -145,6 +145,19 @@ public class FeatureToggleScreen extends Screen {
                 }
             }
         ).bounds(centerX + 5, y, BUTTON_WIDTH/2 - 5, BUTTON_HEIGHT).build());
+        y += BUTTON_SPACING;
+        
+        // Home Button
+        addRenderableWidget(Button.builder(
+            Component.literal("§a🏠 Home"),
+            btn -> {
+                // Send command to server to teleport home
+                if (this.minecraft.player != null) {
+                    this.minecraft.player.connection.sendCommand("home");
+                    this.onClose();
+                }
+            }
+        ).bounds(centerX - BUTTON_WIDTH/2, y, BUTTON_WIDTH, BUTTON_HEIGHT).build());
         y += BUTTON_SPACING * 2;
         
         // Close Button
