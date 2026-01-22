@@ -11,7 +11,8 @@
     "WarpHubProtectionMixin"
   ],
   "client": [
-    "client.MerchantScreenMixin"
+    "client.MerchantScreenMixin",
+    "client.ExperimentalWarningScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

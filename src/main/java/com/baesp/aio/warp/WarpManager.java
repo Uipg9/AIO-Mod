@@ -115,8 +115,14 @@ public class WarpManager {
                 if (portalIndex == -1) {
                     // Previous location portal
                     returnToPreviousLocation(player);
+                } else if (portalIndex == -2) {
+                    // Home Dimension portal
+                    HomeManager.teleportToHome(player);
+                } else if (portalIndex == -3) {
+                    // Overworld Spawn portal
+                    teleportToOverworldSpawn(player);
                 } else {
-                    // Warp portal
+                    // Player warp portal
                     List<WarpPoint> warps = getWarps(player);
                     if (portalIndex >= 0 && portalIndex < warps.size()) {
                         teleportToWarpPoint(player, warps.get(portalIndex));
@@ -125,6 +131,53 @@ public class WarpManager {
                 return;
             }
         }
+    }
+    
+    /**
+     * Teleport player to their overworld spawn point
+     * Uses ascension spawn if they've ascended, otherwise world spawn
+     */
+    private static void teleportToOverworldSpawn(ServerPlayer player) {
+        MinecraftServer server = ((ServerLevel) player.level()).getServer();
+        if (server == null) return;
+        
+        ServerLevel overworld = server.overworld();
+        var playerData = com.baesp.aio.data.PlayerDataManager.getData(player);
+        
+        double spawnX, spawnY, spawnZ;
+        
+        // Check if player has an ascension spawn point
+        if (playerData.ascendancy.ascensionCount > 0 && !Double.isNaN(playerData.ascendancy.ascensionSpawnX)) {
+            spawnX = playerData.ascendancy.ascensionSpawnX;
+            spawnY = playerData.ascendancy.ascensionSpawnY;
+            spawnZ = playerData.ascendancy.ascensionSpawnZ;
+            player.sendSystemMessage(Component.literal("§a✦ Warped to your Ascension Spawn!"));
+        } else {
+            // Use cached village spawn or default position
+            BlockPos villageSpawn = com.baesp.aio.villagespawn.VillageSpawnManager.getPlayerVillageSpawn(player.getUUID());
+            if (villageSpawn != null) {
+                spawnX = villageSpawn.getX() + 0.5;
+                spawnY = villageSpawn.getY();
+                spawnZ = villageSpawn.getZ() + 0.5;
+            } else {
+                // Default spawn at 0,64,0
+                spawnX = 0.5;
+                spawnY = 64;
+                spawnZ = 0.5;
+            }
+            player.sendSystemMessage(Component.literal("§a✦ Warped to World Spawn!"));
+        }
+        
+        player.teleportTo(
+            overworld,
+            spawnX,
+            spawnY,
+            spawnZ,
+            Set.of(),
+            0f,
+            0f,
+            false
+        );
     }
     
     public static void onServerStart(MinecraftServer server) {
@@ -327,95 +380,304 @@ public class WarpManager {
     public static void buildWarpHubPlatform(ServerLevel warpHub, ServerPlayer player) {
         List<WarpPoint> warps = getWarps(player);
         UUID uuid = player.getUUID();
+        MinecraftServer server = warpHub.getServer();
         
         // Clear portal positions for this player
         PORTAL_POSITIONS.put(uuid, new HashMap<>());
         Map<BlockPos, Integer> portalMap = PORTAL_POSITIONS.get(uuid);
         
         // Remove old armor stands in the area
-        AABB clearArea = new AABB(-15, PLATFORM_Y, -15, 15, PLATFORM_Y + 10, 15);
+        AABB clearArea = new AABB(-25, PLATFORM_Y - 5, -25, 25, PLATFORM_Y + 20, 25);
         List<ArmorStand> oldStands = warpHub.getEntitiesOfClass(ArmorStand.class, clearArea);
         for (ArmorStand stand : oldStands) {
             stand.discard();
         }
         
-        // Clear old structures and build central platform
-        int platformRadius = 10;
+        // Build beautiful main platform
+        buildMainPlatform(warpHub);
         
-        for (int xPos = -platformRadius; xPos <= platformRadius; xPos++) {
-            for (int zPos = -platformRadius; zPos <= platformRadius; zPos++) {
-                BlockPos pos = new BlockPos(xPos, PLATFORM_Y, zPos);
-                
-                // Clear above
-                for (int yOffset = 1; yOffset <= 10; yOffset++) {
-                    warpHub.setBlock(pos.above(yOffset), Blocks.AIR.defaultBlockState(), 2);
-                }
-                
-                // Build floor - checkered pattern
-                if (Math.abs(xPos) <= 2 && Math.abs(zPos) <= 2) {
-                    // Center spawn area - crying obsidian for visual
-                    warpHub.setBlock(pos, Blocks.CRYING_OBSIDIAN.defaultBlockState(), 2);
-                } else if ((Math.abs(xPos) + Math.abs(zPos)) % 2 == 0) {
-                    warpHub.setBlock(pos, Blocks.DEEPSLATE_TILES.defaultBlockState(), 2);
-                } else {
-                    warpHub.setBlock(pos, Blocks.POLISHED_DEEPSLATE.defaultBlockState(), 2);
-                }
-            }
-        }
+        // Build decorative structures
+        buildDecorativeStructures(warpHub);
         
-        // Build portal pads in a circle
-        int totalWarps = warps.size() + 1; // +1 for "Previous Location"
+        // === AUTO WARPS (Special portals that are always present) ===
+        // Index -1 = Previous Location
+        // Index -2 = Home Dimension
+        // Index -3 = Overworld Spawn
         
-        // "Previous Location" portal first (at angle 0 = east)
-        double angle = 0;
-        int px = (int) Math.round(PORTAL_RADIUS * Math.cos(angle));
-        int pz = (int) Math.round(PORTAL_RADIUS * Math.sin(angle));
-        buildPortalPad(warpHub, new BlockPos(px, PLATFORM_Y, pz), "§e⟲ Previous Location", true);
-        portalMap.put(new BlockPos(px, PLATFORM_Y, pz), -1);
+        // Portal positions - arranged in a beautiful pattern
+        // Inner ring (radius 6): Auto warps
+        // Outer ring (radius 10): Player warps
         
-        // Player warps
+        // Previous Location (East, Yellow)
+        BlockPos prevPos = new BlockPos(6, PLATFORM_Y, 0);
+        buildPortalPad(warpHub, prevPos, "§e⟲ Previous Location", PortalType.PREVIOUS);
+        portalMap.put(prevPos, -1);
+        
+        // Home Dimension (West, Green)
+        BlockPos homePos = new BlockPos(-6, PLATFORM_Y, 0);
+        buildPortalPad(warpHub, homePos, "§a🏠 Home Dimension", PortalType.HOME);
+        portalMap.put(homePos, -2);
+        
+        // Overworld Spawn (South, Blue) - Gets player's current spawn point
+        BlockPos overworldPos = new BlockPos(0, PLATFORM_Y, 6);
+        String overworldName = getOverworldSpawnName(player, server);
+        buildPortalPad(warpHub, overworldPos, "§b🌍 " + overworldName, PortalType.OVERWORLD);
+        portalMap.put(overworldPos, -3);
+        
+        // Player warps in outer ring
+        double outerRadius = 10.0;
+        int startAngle = 45; // Start at NE to avoid auto-warp positions
         for (int i = 0; i < warps.size(); i++) {
             WarpPoint warp = warps.get(i);
-            angle = (2 * Math.PI * (i + 1)) / Math.max(totalWarps, 8);
-            px = (int) Math.round(PORTAL_RADIUS * Math.cos(angle));
-            pz = (int) Math.round(PORTAL_RADIUS * Math.sin(angle));
-            buildPortalPad(warpHub, new BlockPos(px, PLATFORM_Y, pz), "§b" + warp.name, false);
-            portalMap.put(new BlockPos(px, PLATFORM_Y, pz), i);
+            double angle = Math.toRadians(startAngle + (i * 45)); // 45 degree spacing
+            if (i >= 8) {
+                // Second ring for more warps
+                outerRadius = 14.0;
+                angle = Math.toRadians((i - 8) * 45 + 22.5);
+            }
+            int px = (int) Math.round(outerRadius * Math.cos(angle));
+            int pz = (int) Math.round(outerRadius * Math.sin(angle));
+            BlockPos warpPos = new BlockPos(px, PLATFORM_Y, pz);
+            buildPortalPad(warpHub, warpPos, "§d✦ " + warp.name, PortalType.PLAYER);
+            portalMap.put(warpPos, i);
         }
-        
-        // Center glowstone for lighting (floating above)
-        warpHub.setBlock(new BlockPos(0, PLATFORM_Y + 6, 0), Blocks.GLOWSTONE.defaultBlockState(), 2);
-        warpHub.setBlock(new BlockPos(3, PLATFORM_Y + 4, 3), Blocks.SEA_LANTERN.defaultBlockState(), 2);
-        warpHub.setBlock(new BlockPos(-3, PLATFORM_Y + 4, 3), Blocks.SEA_LANTERN.defaultBlockState(), 2);
-        warpHub.setBlock(new BlockPos(3, PLATFORM_Y + 4, -3), Blocks.SEA_LANTERN.defaultBlockState(), 2);
-        warpHub.setBlock(new BlockPos(-3, PLATFORM_Y + 4, -3), Blocks.SEA_LANTERN.defaultBlockState(), 2);
     }
     
     /**
-     * Build a portal pad at floor level with floating name
+     * Get the name for the Overworld spawn portal
      */
-    private static void buildPortalPad(ServerLevel world, BlockPos center, String name, boolean isPreviousLocation) {
-        // Build 3x3 portal pad on the floor
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                BlockPos pos = center.offset(dx, 0, dz);
-                if (dx == 0 && dz == 0) {
-                    // Center block - end portal frame for the glowing effect
-                    world.setBlock(pos, Blocks.END_PORTAL_FRAME.defaultBlockState(), 2);
-                } else {
-                    // Surrounding blocks - purple for previous, cyan for warps
-                    if (isPreviousLocation) {
-                        world.setBlock(pos, Blocks.GOLD_BLOCK.defaultBlockState(), 2);
+    private static String getOverworldSpawnName(ServerPlayer player, MinecraftServer server) {
+        var playerData = com.baesp.aio.data.PlayerDataManager.getData(player);
+        if (playerData.ascendancy.ascensionCount > 0 && !Double.isNaN(playerData.ascendancy.ascensionSpawnX)) {
+            return "Ascension Spawn";
+        }
+        return "World Spawn";
+    }
+    
+    /**
+     * Build the main platform with beautiful design
+     */
+    private static void buildMainPlatform(ServerLevel world) {
+        // Extended platform with gradient design
+        int mainRadius = 18;
+        
+        for (int x = -mainRadius; x <= mainRadius; x++) {
+            for (int z = -mainRadius; z <= mainRadius; z++) {
+                double dist = Math.sqrt(x * x + z * z);
+                BlockPos pos = new BlockPos(x, PLATFORM_Y, z);
+                
+                // Clear above
+                for (int y = 1; y <= 15; y++) {
+                    world.setBlock(pos.above(y), Blocks.AIR.defaultBlockState(), 2);
+                }
+                
+                // Circular platform with gradient
+                if (dist <= mainRadius) {
+                    if (dist <= 3) {
+                        // Center - Crystal design
+                        world.setBlock(pos, Blocks.AMETHYST_BLOCK.defaultBlockState(), 2);
+                    } else if (dist <= 5) {
+                        // Inner ring - Purple
+                        world.setBlock(pos, Blocks.PURPUR_BLOCK.defaultBlockState(), 2);
+                    } else if (dist <= 8) {
+                        // Middle ring - Checkered
+                        if ((Math.abs(x) + Math.abs(z)) % 2 == 0) {
+                            world.setBlock(pos, Blocks.POLISHED_DEEPSLATE.defaultBlockState(), 2);
+                        } else {
+                            world.setBlock(pos, Blocks.DEEPSLATE_TILES.defaultBlockState(), 2);
+                        }
+                    } else if (dist <= 12) {
+                        // Outer area - Darker
+                        world.setBlock(pos, Blocks.DEEPSLATE_BRICKS.defaultBlockState(), 2);
                     } else {
-                        world.setBlock(pos, Blocks.DIAMOND_BLOCK.defaultBlockState(), 2);
+                        // Edge - Blackstone
+                        world.setBlock(pos, Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState(), 2);
                     }
                 }
             }
         }
         
+        // Platform edge border
+        for (int i = 0; i < 360; i += 10) {
+            double rad = Math.toRadians(i);
+            int x = (int) Math.round(mainRadius * Math.cos(rad));
+            int z = (int) Math.round(mainRadius * Math.sin(rad));
+            world.setBlock(new BlockPos(x, PLATFORM_Y, z), Blocks.GILDED_BLACKSTONE.defaultBlockState(), 2);
+        }
+    }
+    
+    /**
+     * Build decorative structures around the hub
+     */
+    private static void buildDecorativeStructures(ServerLevel world) {
+        // Center beacon-like structure
+        buildCenterBeacon(world);
+        
+        // Corner pillars with crystals
+        int pillarDist = 15;
+        buildCornerPillar(world, new BlockPos(pillarDist, PLATFORM_Y, pillarDist));
+        buildCornerPillar(world, new BlockPos(-pillarDist, PLATFORM_Y, pillarDist));
+        buildCornerPillar(world, new BlockPos(pillarDist, PLATFORM_Y, -pillarDist));
+        buildCornerPillar(world, new BlockPos(-pillarDist, PLATFORM_Y, -pillarDist));
+        
+        // Arches between pillars
+        buildArch(world, pillarDist, 0); // East
+        buildArch(world, -pillarDist, 0); // West
+        buildArch(world, 0, pillarDist); // South
+        buildArch(world, 0, -pillarDist); // North
+        
+        // Floating crystal rings
+        buildFloatingRing(world, 10, PLATFORM_Y + 8);
+        buildFloatingRing(world, 6, PLATFORM_Y + 12);
+    }
+    
+    /**
+     * Build the center beacon structure
+     */
+    private static void buildCenterBeacon(ServerLevel world) {
+        // Base
+        for (int x = -1; x <= 1; x++) {
+            for (int z = -1; z <= 1; z++) {
+                world.setBlock(new BlockPos(x, PLATFORM_Y + 1, z), Blocks.QUARTZ_BLOCK.defaultBlockState(), 2);
+            }
+        }
+        
+        // Pillar
+        for (int y = 2; y <= 5; y++) {
+            world.setBlock(new BlockPos(0, PLATFORM_Y + y, 0), Blocks.QUARTZ_PILLAR.defaultBlockState(), 2);
+        }
+        
+        // Top
+        world.setBlock(new BlockPos(0, PLATFORM_Y + 6, 0), Blocks.END_ROD.defaultBlockState(), 2);
+        world.setBlock(new BlockPos(0, PLATFORM_Y + 7, 0), Blocks.BEACON.defaultBlockState(), 2);
+        
+        // Surrounding end rods
+        world.setBlock(new BlockPos(1, PLATFORM_Y + 3, 0), Blocks.END_ROD.defaultBlockState(), 2);
+        world.setBlock(new BlockPos(-1, PLATFORM_Y + 3, 0), Blocks.END_ROD.defaultBlockState(), 2);
+        world.setBlock(new BlockPos(0, PLATFORM_Y + 3, 1), Blocks.END_ROD.defaultBlockState(), 2);
+        world.setBlock(new BlockPos(0, PLATFORM_Y + 3, -1), Blocks.END_ROD.defaultBlockState(), 2);
+    }
+    
+    /**
+     * Build a corner pillar with crystal top
+     */
+    private static void buildCornerPillar(ServerLevel world, BlockPos base) {
+        // Base
+        for (int x = -1; x <= 1; x++) {
+            for (int z = -1; z <= 1; z++) {
+                world.setBlock(base.offset(x, 0, z), Blocks.CHISELED_POLISHED_BLACKSTONE.defaultBlockState(), 2);
+            }
+        }
+        
+        // Pillar
+        for (int y = 1; y <= 6; y++) {
+            world.setBlock(base.above(y), Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState(), 2);
+        }
+        
+        // Crystal top
+        world.setBlock(base.above(7), Blocks.AMETHYST_BLOCK.defaultBlockState(), 2);
+        world.setBlock(base.above(8), Blocks.AMETHYST_CLUSTER.defaultBlockState(), 2);
+        
+        // Lanterns
+        world.setBlock(base.offset(1, 4, 0), Blocks.SOUL_LANTERN.defaultBlockState(), 2);
+        world.setBlock(base.offset(-1, 4, 0), Blocks.SOUL_LANTERN.defaultBlockState(), 2);
+        world.setBlock(base.offset(0, 4, 1), Blocks.SOUL_LANTERN.defaultBlockState(), 2);
+        world.setBlock(base.offset(0, 4, -1), Blocks.SOUL_LANTERN.defaultBlockState(), 2);
+    }
+    
+    /**
+     * Build an arch structure
+     */
+    private static void buildArch(ServerLevel world, int x, int z) {
+        // Arch pillars
+        for (int y = 1; y <= 5; y++) {
+            if (x != 0) {
+                world.setBlock(new BlockPos(x, PLATFORM_Y + y, z - 2), Blocks.POLISHED_BLACKSTONE.defaultBlockState(), 2);
+                world.setBlock(new BlockPos(x, PLATFORM_Y + y, z + 2), Blocks.POLISHED_BLACKSTONE.defaultBlockState(), 2);
+            } else {
+                world.setBlock(new BlockPos(x - 2, PLATFORM_Y + y, z), Blocks.POLISHED_BLACKSTONE.defaultBlockState(), 2);
+                world.setBlock(new BlockPos(x + 2, PLATFORM_Y + y, z), Blocks.POLISHED_BLACKSTONE.defaultBlockState(), 2);
+            }
+        }
+        
+        // Arch top
+        if (x != 0) {
+            for (int dz = -2; dz <= 2; dz++) {
+                world.setBlock(new BlockPos(x, PLATFORM_Y + 6, z + dz), Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState(), 2);
+            }
+        } else {
+            for (int dx = -2; dx <= 2; dx++) {
+                world.setBlock(new BlockPos(x + dx, PLATFORM_Y + 6, z), Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState(), 2);
+            }
+        }
+    }
+    
+    /**
+     * Build a floating ring of crystals
+     */
+    private static void buildFloatingRing(ServerLevel world, int radius, int y) {
+        for (int i = 0; i < 12; i++) {
+            double angle = Math.toRadians(i * 30);
+            int x = (int) Math.round(radius * Math.cos(angle));
+            int z = (int) Math.round(radius * Math.sin(angle));
+            world.setBlock(new BlockPos(x, y, z), Blocks.END_ROD.defaultBlockState(), 2);
+        }
+    }
+    
+    // Portal types for visual distinction
+    private enum PortalType {
+        PREVIOUS, HOME, OVERWORLD, PLAYER
+    }
+    
+    /**
+     * Build a portal pad at floor level with floating name
+     */
+    private static void buildPortalPad(ServerLevel world, BlockPos center, String name, PortalType type) {
+        // Get blocks based on portal type
+        net.minecraft.world.level.block.state.BlockState centerBlock;
+        net.minecraft.world.level.block.state.BlockState surroundBlock;
+        
+        switch (type) {
+            case PREVIOUS:
+                centerBlock = Blocks.LODESTONE.defaultBlockState();
+                surroundBlock = Blocks.GOLD_BLOCK.defaultBlockState();
+                break;
+            case HOME:
+                centerBlock = Blocks.MOSS_BLOCK.defaultBlockState();
+                surroundBlock = Blocks.EMERALD_BLOCK.defaultBlockState();
+                break;
+            case OVERWORLD:
+                centerBlock = Blocks.GRASS_BLOCK.defaultBlockState();
+                surroundBlock = Blocks.LAPIS_BLOCK.defaultBlockState();
+                break;
+            case PLAYER:
+            default:
+                centerBlock = Blocks.END_PORTAL_FRAME.defaultBlockState();
+                surroundBlock = Blocks.DIAMOND_BLOCK.defaultBlockState();
+                break;
+        }
+        
+        // Build 3x3 portal pad on the floor
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                BlockPos pos = center.offset(dx, 0, dz);
+                if (dx == 0 && dz == 0) {
+                    world.setBlock(pos, centerBlock, 2);
+                } else {
+                    world.setBlock(pos, surroundBlock, 2);
+                }
+            }
+        }
+        
+        // Corner decorations
+        world.setBlock(center.offset(-1, 1, -1), Blocks.END_ROD.defaultBlockState(), 2);
+        world.setBlock(center.offset(1, 1, -1), Blocks.END_ROD.defaultBlockState(), 2);
+        world.setBlock(center.offset(-1, 1, 1), Blocks.END_ROD.defaultBlockState(), 2);
+        world.setBlock(center.offset(1, 1, 1), Blocks.END_ROD.defaultBlockState(), 2);
+        
         // Spawn armor stand with name floating above
         ArmorStand nameTag = new ArmorStand(EntityType.ARMOR_STAND, world);
-        nameTag.setPos(center.getX() + 0.5, center.getY() + 2.0, center.getZ() + 0.5);
+        nameTag.setPos(center.getX() + 0.5, center.getY() + 2.5, center.getZ() + 0.5);
         nameTag.setCustomName(Component.literal(name));
         nameTag.setCustomNameVisible(true);
         nameTag.setInvisible(true);
